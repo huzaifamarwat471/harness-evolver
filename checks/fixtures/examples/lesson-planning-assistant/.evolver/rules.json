@@ -1,0 +1,2 @@
+{"checks": {"must_not_include": ["projector", "tablet", "video", "smartboard", "laptop", "internet"],
+            "max_words": 250}}

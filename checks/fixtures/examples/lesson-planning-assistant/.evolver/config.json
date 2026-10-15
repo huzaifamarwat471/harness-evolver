@@ -1,0 +1,17 @@
+{
+  "refiner_model": "opus",
+  "judge_model": "haiku",
+  "repeats": 1,
+  "max_rounds": 2,
+  "max_run_cost_usd": 2.0,
+  "harness_files": [
+    "prompts/*.md"
+  ],
+  "runner": {
+    "command": [
+      "{python}",
+      "run_agent.py",
+      "--json"
+    ]
+  }
+}

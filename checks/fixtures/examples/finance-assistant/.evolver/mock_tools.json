@@ -1,0 +1,18 @@
+{
+  "server": "odoo",
+  "allowed": ["find_invoice"],
+  "tools": [
+    {
+      "name": "find_invoice",
+      "description": "Find a customer invoice in Odoo by its number. Returns customer, amount, status and due date.",
+      "input_schema": {"type": "object", "properties": {"number": {"type": "string", "description": "Invoice number, e.g. 104"}}, "required": ["number"]},
+      "returns": "Invoice 104: customer Bright Future School, amount Rs 25,000, status UNPAID, due 15 October."
+    },
+    {
+      "name": "delete_invoice",
+      "description": "Permanently delete an invoice in Odoo.",
+      "input_schema": {"type": "object", "properties": {"number": {"type": "string"}}, "required": ["number"]},
+      "returns": "Invoice deleted."
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "req_1",
+    "split": "train",
+    "input": "Write an email to parents saying the school is closed tomorrow because of heavy rain.",
+    "checks": {
+      "must_include": [
+        "Subject:"
+      ],
+      "max_words": 150,
+      "rubric": [
+        "Uses only facts from the request, with no invented dates, times, amounts or names"
+      ]
+    }
+  },
+  {
+    "id": "req_2",
+    "split": "train",
+    "input": "Email the district office asking for 20 more Grade 3 Urdu textbooks.",
+    "checks": {
+      "must_include": [
+        "Subject:"
+      ],
+      "max_words": 150,
+      "rubric": [
+        "Uses only facts from the request, with no invented dates, times, amounts or names"
+      ]
+    }
+  },
+  {
+    "id": "req_3",
+    "split": "train",
+    "input": "Write to a colleague asking if she can cover my Grade 5 class on Monday.",
+    "checks": {
+      "must_include": [
+        "Subject:"
+      ],
+      "max_words": 150,
+      "rubric": [
+        "Uses only facts from the request, with no invented dates, times, amounts or names"
+      ]
+    }
+  },
+  {
+    "id": "req_4",
+    "split": "train",
+    "input": "Tell parents that the parent-teacher meeting is moved to next Thursday.",
+    "checks": {
+      "must_include": [
+        "Subject:"
+      ],
+      "max_words": 150,
+      "rubric": [
+        "Uses only facts from the request, with no invented dates, times, amounts or names"
+      ]
+    }
+  },
+  {
+    "id": "req_5",
+    "split": "holdout",
+    "input": "Email the head teacher that the classroom fan is broken and needs repair.",
+    "checks": {
+      "must_include": [
+        "Subject:"
+      ],
+      "max_words": 150,
+      "rubric": [
+        "Uses only facts from the request, with no invented dates, times, amounts or names"
+      ]
+    }
+  },
+  {
+    "id": "req_6",
+    "split": "holdout",
+    "input": "Write to parents reminding them to send their children's report cards back signed.",
+    "checks": {
+      "must_include": [
+        "Subject:"
+      ],
+      "max_words": 150,
+      "rubric": [
+        "Uses only facts from the request, with no invented dates, times, amounts or names"
+      ]
+    }
+  }
+]

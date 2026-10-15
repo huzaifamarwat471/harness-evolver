@@ -1,0 +1,7 @@
+{
+  "worker_model": "sonnet",
+  "refiner_model": "opus",
+  "judge_model": "haiku",
+  "repeats": 1,
+  "max_rounds": 1
+}

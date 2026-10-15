@@ -1,0 +1,268 @@
+[
+  {
+    "id": "g1_counting",
+    "split": "train",
+    "input": "Grade 1 Math, counting to 10, 30 minutes",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 1 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g2_vowels",
+    "split": "train",
+    "input": "Grade 2 English, vowel sounds a e i o u",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 2 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g3_fractions",
+    "split": "train",
+    "input": "Grade 3 Math, halves and quarters, 35 minutes",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 3 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g4_plants",
+    "split": "train",
+    "input": "Grade 4 Science, parts of a plant and what each part does",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 4 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g5_water",
+    "split": "train",
+    "input": "Grade 5 Science, the water cycle, 40 minutes",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 5 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g3_urdu_ru",
+    "split": "train",
+    "input": "Grade 3 Urdu ka sabaq: haroof-e-tahaji ki dohrai, 30 minute",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 3 children (not too advanced, not too simple)?",
+        "Is the lesson plan written in the same language as the teacher's request (Roman Urdu request gets a Roman Urdu reply)?"
+      ]
+    }
+  },
+  {
+    "id": "g2_shapes_ru",
+    "split": "train",
+    "input": "Grade 2 math mein shapes (circle, square, triangle) ka sabaq plan bana dein",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 2 children (not too advanced, not too simple)?",
+        "Is the lesson plan written in the same language as the teacher's request (Roman Urdu request gets a Roman Urdu reply)?"
+      ]
+    }
+  },
+  {
+    "id": "g4_provinces",
+    "split": "train",
+    "input": "Grade 4 Social Studies, provinces of Pakistan and their capitals",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 4 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g1_animals",
+    "split": "train",
+    "input": "Grade 1 English, names of farm animals",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 1 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g5_division",
+    "split": "train",
+    "input": "Grade 5 Math, long division with remainders",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 5 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g3_hygiene",
+    "split": "train",
+    "input": "Grade 3 General Science, washing hands and keeping clean",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 3 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "g4_story_ru",
+    "split": "train",
+    "input": "Grade 4 English story reading ka sabaq, bachon ki reading improve karni hai",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 4 children (not too advanced, not too simple)?",
+        "Is the lesson plan written in the same language as the teacher's request (Roman Urdu request gets a Roman Urdu reply)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g2_addition",
+    "split": "holdout",
+    "input": "Grade 2 Math, adding two-digit numbers without carrying",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 2 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g5_magnets",
+    "split": "holdout",
+    "input": "Grade 5 Science, magnets: attract and repel",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 5 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g1_colours_ru",
+    "split": "holdout",
+    "input": "Grade 1 ke bachon ke liye rangon (colours) ka sabaq, 25 minute",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 1 children (not too advanced, not too simple)?",
+        "Is the lesson plan written in the same language as the teacher's request (Roman Urdu request gets a Roman Urdu reply)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g3_time",
+    "split": "holdout",
+    "input": "Grade 3 Math, telling time on a clock (hours and half hours)",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 3 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g4_nouns",
+    "split": "holdout",
+    "input": "Grade 4 English, common and proper nouns",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 4 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g5_islamiat_ru",
+    "split": "holdout",
+    "input": "Grade 5 Islamiat ka sabaq: sachai (truthfulness) par, 35 minute",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 5 children (not too advanced, not too simple)?",
+        "Is the lesson plan written in the same language as the teacher's request (Roman Urdu request gets a Roman Urdu reply)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g2_weather",
+    "split": "holdout",
+    "input": "Grade 2 Science, types of weather: sunny, rainy, windy, cloudy",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 2 children (not too advanced, not too simple)?"
+      ]
+    }
+  },
+  {
+    "id": "h_g3_map_ru",
+    "split": "holdout",
+    "input": "Grade 3 Social Studies mein apne shehar ka naqsha (map) banana sikhana hai",
+    "checks": {
+      "must_include": [
+        "Check for understanding"
+      ],
+      "rubric": [
+        "Are the activities and wording suitable for Grade 3 children (not too advanced, not too simple)?",
+        "Is the lesson plan written in the same language as the teacher's request (Roman Urdu request gets a Roman Urdu reply)?"
+      ]
+    }
+  }
+]

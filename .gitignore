@@ -1,0 +1,20 @@
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+__pycache__/
+*.pyc
+*.bak
+*.bak2
+
+# Harness Evolver run data (real conversations and answers: never commit)
+**/.evolver/runs/
+**/.evolver/backups/
+**/.evolver/inbox/
+**/.evolver/notifications/
+**/.evolver/evals.db
+**/.evolver/last_auto_apply.json
+
+# Personal Claude Code settings
+.claude/settings.local.json

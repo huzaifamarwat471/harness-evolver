@@ -1,0 +1,156 @@
+[
+  {
+    "id": "plan_1",
+    "split": "train",
+    "input": "Grade 3 Math, addition with carrying. I explain the method on the board for 20 minutes. Then students solve 10 sums from the textbook silently. I check copies at the end.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_2",
+    "split": "train",
+    "input": "Grade 5 English, reading comprehension. I read a story aloud to the class of 40 students. Then students answer 5 questions from the textbook in their notebooks.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_3",
+    "split": "train",
+    "input": "Grade 4 Science, parts of a plant. I bring a real plant from the school garden and show the roots, stem and leaves. Students draw and label the parts.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_4",
+    "split": "train",
+    "input": "Grade 2 Urdu, alphabet revision. Students repeat each letter after me in chorus for the whole period.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_5",
+    "split": "train",
+    "input": "Grade 6 Social Studies, provinces of Pakistan. I draw a map on the board and students copy the province names. We end with a quick group quiz.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_6",
+    "split": "holdout",
+    "input": "Grade 1 Math, counting to 20. Students work in pairs and count sticks and small stones that I collected.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_7",
+    "split": "holdout",
+    "input": "Grade 5 Science, the water cycle. I read the chapter from the textbook and write definitions on the board. Students memorise them.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "plan_8",
+    "split": "holdout",
+    "input": "Grade 3 English, new vocabulary. I write 10 new words on the board and students write each word 5 times.",
+    "checks": {
+      "max_words": 120,
+      "must_not_include": [
+        "projector",
+        "tablet",
+        "youtube",
+        "video",
+        "internet"
+      ],
+      "rubric": [
+        "Starts by naming a specific strength that is actually in this lesson plan"
+      ]
+    }
+  },
+  {
+    "id": "email_head",
+    "needs_tools": true,
+    "input": "Email this feedback to my head teacher.",
+    "checks": {
+      "rubric": [
+        "Confirms the email was sent"
+      ]
+    }
+  }
+]

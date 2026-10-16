@@ -1,11 +1,14 @@
 # Harness Evolver (Claude Code edition), prototype
 
-> **Status:** prototype for testing. Not for automatic production use. A human approves every change.
+> **Status:** prototype for testing. By default a human approves every change. With auto-apply (for example
+> `quickstart.py --auto`), a verified fix can be applied on its own, but only when every safety check passes.
+> Do not run auto-apply on a production agent until its tests have been reviewed.
 > Built by Huzaifa Razaq (R&D). Please share bugs and results.
 
 Improves the harness of **any Claude Code agent**: its `CLAUDE.md`, skills and commands. You give it a few test
 cases. It finds what the agent keeps getting wrong, proposes one small fix, tests the fix on cases it has not seen,
-and asks you to approve. Your agent's files are never changed until you run `apply`.
+and asks you to approve. By default your agent's files are not changed until you run `apply`. With auto-apply on,
+a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## How it works
 

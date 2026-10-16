@@ -1,0 +1,18 @@
+---
+description: Reverse the last change that auto-apply made (restores the old files from the backup)
+argument-hint: <agent folder>
+---
+Reverse the last auto-applied change for this agent: $ARGUMENTS
+
+The current folder must contain evolver.py. If the arguments are empty, ask for the agent folder and stop.
+
+Tell the user what undo does, then ask them to reply "yes":
+- It restores the files changed by the last auto-apply from the backup.
+- It refuses if the file was edited after the auto-apply, so nothing the user wrote is lost.
+- It does NOT reverse a manual apply. For that, the old file is in <agent folder>\.evolver\backups and can be copied back by hand.
+
+After an explicit yes, run (folder paths with spaces must be in double quotes):
+
+python evolver.py undo $ARGUMENTS
+
+Show the output unchanged. If it refuses, explain why in one sentence and do not try to force it.

@@ -57,6 +57,39 @@ A third, `examples/finance-assistant`, uses **fake Odoo tools** (see below):
 python evolver.py run examples/finance-assistant
 ```
 
+## One-command setup (quickstart)
+
+`quickstart.py` gets any agent folder ready with one command. Run it from the folder that contains `evolver.py`:
+
+    python quickstart.py "path\to\your-agent"
+
+It checks your setup (Python, Claude Code and the options the tool uses) and runs `init` if the agent has no `.evolver` folder yet. `init` asks Claude Code to draft the tests, which uses a little of your Claude plan. Then it prints the files you must review and the exact next command. It never overwrites a file, never runs the evolve loop itself, and keeps the first run review-only.
+
+If the agent uses tools, add their names and your real MCP server's name (`--server`; it must match, so tool names in your instructions still resolve). It drafts `.evolver/mock_tools.json`, and risky-looking tools (delete, send, post, pay...) are left out of "allowed", so a call is blocked:
+
+    python quickstart.py "path\to\your-agent" --tools find_invoice,delete_invoice --server odoo
+
+The allowed / not allowed split is a guess from the names. Check it, and fill in each TODO.
+
+### Turn on the continuous loop
+
+    python quickstart.py "path\to\your-agent" --auto
+
+This installs the session-end hook, schedules a daily run, and turns auto-apply on with a spending cap per run (quickstart uses $3 by default; change it with `--cap`). It shows exactly what it will do and asks first (`--yes` skips the question). Every safety gate stays in force: a fix is applied only if the holdout score, the repeated confirmation runs, the judge-agreement check and `rules.json` all allow it. Every applied fix is backed up, and `python evolver.py undo` reverses it. See "Auto integration" below for the details.
+### Turn it off
+
+    python quickstart.py "path\to\your-agent" --propose-only
+    python quickstart.py "path\to\your-agent" --off
+
+`--propose-only` keeps the loop running but never applies a fix on its own. `--off` turns off auto-apply, the daily schedule and the session-end hook. Neither deletes saved conversations (`.evolver/inbox/`) or undoes fixes that were already applied.
+
+### Read this before trusting `--auto`
+
+- The tests decide every result. `init` drafts them with Claude from `CLAUDE.md` alone, and they may be wrong. Before the loop runs on a real agent, review `.evolver/context.md` and `.evolver/tests.json`: delete the DRAFT line and keep only the list.
+- `--accept-drafts` skips that review and `--starter-rules` writes a one-line placeholder `rules.json`. They are for trying the tool. A loop that applies fixes against unreviewed tests can move the agent toward the wrong goal.
+- A daily run can spend up to the cap every day, for each agent.
+- The hook saves real conversations to `.evolver/inbox/`. It is git-ignored: keep it private.
+- Tested so far on Windows, on the examples and on one real agent. A scheduled run firing on its own and applying a fix has not been seen yet.
 ## Use it on your own agent
 
 1. **Set up:** `python evolver.py init "path/to/your-agent"`
@@ -106,7 +139,7 @@ Instead of only using test cases you write, the tool can learn from how people r
 The hook only collects. Every fix is still tested, and you still make the final decision.
 `.evolver/inbox/` contains real conversations: it is in `.gitignore`, keep it private.
 
-### Agents that use tools: fake tools (optional)
+### Agents with tools: fake tools (optional)
 
 Real tools would take real actions during tests (dozens of times per run), so they are always blocked.
 Instead, describe **fake versions** of your agent's tools in `.evolver/mock_tools.json`. They have the same names
@@ -123,11 +156,16 @@ as the real ones but return pretend data, and every call is recorded:
 ```
 - `server` should match your real MCP server's name, so tool names in your instructions still match.
 - Only tools in `allowed` can run. Anything else is blocked by Claude Code, and the attempt is recorded.
+- Define risky tools (for example a delete) but leave them out of `allowed`: a call is blocked, recorded, and counts as a failure.
+- A test with tool checks and no `mock_tools.json` stops the tool with an error.
 - A test case can override answers: `"mock_returns": {"find_invoice": "Invoice 210: PAID"}`.
 - New checks: `"must_call_tool": ["find_invoice"]`, `"must_not_call_tool": ["delete_invoice"]` and
   `"max_tool_attempts": {"delete_invoice": 1}`
   (a blocked attempt also counts as "called").
-- Real MCP servers are never loaded during tests. Only the fake server runs.
+- Real MCP servers are not loaded during tests; only the fake server runs. Some Claude Code versions ignore the switch that turns real tools off (`--strict-mcp-config`): check your version before the first run on an agent with live tools.
+- Fake tools return pretend data: logins, real error responses and wrong arguments are not tested.
+- Fake tools only work with Claude Code agents, not with a custom runner command.
+- Writing `mock_tools.json` by hand is the main setup work. `quickstart.py --tools a,b --server NAME` drafts it: check the allowed / not allowed split and fill in the TODOs.
 
 ### Keeping runs cheap
 
@@ -261,25 +299,3 @@ use Git Bash or WSL.
 - **If you trigger runs from a hook,** check the environment variable `EVOLVER_RUNNING`: it is `1` inside the tool's
   own test sessions. Skip your hook then, or each test session would start the tool again in a loop.
 - Not handled yet: `CLAUDE.md` files in subfolders, extra files inside skill folders, learning from real conversation logs.
-
-## Agents with tools
-
-Real tools are always blocked during tests, because a test run repeats each action many times.
-To test an agent that calls tools, describe fake versions of them:
-
-1. List the tools your agent calls: name, what it takes, what it returns.
-2. Create `.evolver/mock_tools.json`. Start from `examples/finance-assistant/.evolver/mock_tools.json`.
-   It needs a `server` name and a `tools` list. Each tool has `name`, `description`, `input_schema`
-   and `returns` (the pretend answer).
-3. List the tools the agent may use in `allowed`. Define risky tools (for example a delete) but
-   leave them out of `allowed`: a call is blocked, recorded, and counts as a failure.
-4. Add tool checks to your tests (for example `must_not_call_tool`). A test with tool checks
-   and no `mock_tools.json` stops the tool with an error.
-
-Limits:
-
-- Fake tools return pretend data. Logins, real error responses and wrong arguments are not tested.
-- Fake tools only work with Claude Code agents, not with a custom runner command.
-- Some Claude Code versions ignore the switch that turns real tools off (`--strict-mcp-config`).
-  Check your version before the first run.
-- Writing `mock_tools.json` by hand is the main setup work for agents with many tools.

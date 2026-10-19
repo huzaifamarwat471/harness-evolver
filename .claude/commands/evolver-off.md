@@ -16,4 +16,4 @@ After an explicit yes, run (folder paths with spaces must be in double quotes):
 
 python quickstart.py $ARGUMENTS --off --yes
 
-Show the output unchanged. Then remind the user that saved conversations are still in .evolver\inbox and can be deleted if they are not wanted.
+Show the output unchanged. Then, only if the folder .evolver\inbox exists, remind the user that saved conversations are still there and can be deleted if they are not wanted.

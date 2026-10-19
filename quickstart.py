@@ -613,7 +613,7 @@ def main():
         print("  - %s : fill in each TODO description and pretend answer" % (evo / "mock_tools.json"))
     print("\nThen run (review mode: it shows the cost estimate and asks before spending anything):")
     print('  python evolver.py run "%s"' % agent)
-    print("\nAny fix waits in proposed.patch. Apply it only after you have read it; 'undo' reverses an apply.")
+    print("\nAny fix waits in proposed.patch. Apply it only after you have read it; 'undo' reverses a change that auto-apply made; after a manual apply the old file is in .evolver/backups.")
     print("To turn on the continuous loop later: python quickstart.py \"%s\" --auto" % agent)
     return 0
 

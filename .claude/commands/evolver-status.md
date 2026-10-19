@@ -4,7 +4,7 @@ argument-hint: <agent folder>
 ---
 Report the Harness Evolver state of this agent: $ARGUMENTS
 
-This is read-only: do not edit, run or install anything except the one schtasks query below. If the arguments are empty, ask for the agent folder and stop. If <folder>\.evolver does not exist, say the agent has not been set up (suggest /evolver-setup) and stop.
+This is read-only: do not edit, run or install anything except the one schtasks query below. Use short, separate read-only commands (Test-Path, Get-Content, Get-ChildItem, Select-String) or your file-reading tools. Do not write one long script, and do not use script blocks, loops or braces. If the arguments are empty, ask for the agent folder and stop. If <folder>\.evolver does not exist, say the agent has not been set up (suggest /evolver-setup) and stop.
 
 Check each item and show the results as a small table (item, state):
 1. Auto-apply: read <folder>\.evolver\config.json. "auto_apply" true or missing means ON (the default), false means OFF (propose only). Also report max_run_cost_usd (1.0 if missing).

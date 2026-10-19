@@ -93,6 +93,27 @@ This installs the session-end hook, schedules a daily run, and turns auto-apply 
 - A daily run can spend up to the cap every day, for each agent.
 - The hook saves real conversations to `.evolver/inbox/`. It is git-ignored: keep it private.
 - Tested so far on Windows, on the examples and on one real agent. A scheduled run firing on its own and applying a fix has not been seen yet.
+### Slash commands in Claude Code (optional)
+
+If you work in Claude Code, start it in this folder (`claude`). The commands in `.claude/commands/` appear when you type `/evolver`:
+
+| Command | What it does | Cost |
+|---|---|---|
+| `/evolver-help` | Lists the commands | free |
+| `/evolver-check` | Runs the self-test | free |
+| `/evolver-setup <agent folder>` | Same as `quickstart.py`: checks your setup and drafts starter tests | a little Claude plan |
+| `/evolver-report <agent folder>` | Shows saved results | free |
+| `/evolver-status <agent folder>` | Shows whether the loop is on, and what it has done | free |
+| `/evolver-run <agent folder>` | Finds failures and proposes one fix (review mode) | about $1 to $4 |
+| `/evolver-apply <run folder>` | Applies a proposed fix after you say yes (a backup is kept) | free |
+| `/evolver-undo <agent folder>` | Reverses the last change that auto-apply made | free |
+| `/evolver-off <agent folder>` | Turns the continuous loop off | free |
+
+- Keep Claude Code in manual mode, so it asks before each command. Commands that spend plan usage or change files wait for an explicit "yes" in the chat.
+- `/evolver-run` refuses when the agent has a `rules.json` and auto-apply is on, because that run could change the agent on its own.
+- Turning the continuous loop on (`quickstart.py --auto`) stays in a normal terminal. It asks for consent and installs a hook and a scheduled task.
+- Status: `/evolver-help` and `/evolver-status` have been tried in a real session. The others are written but not yet tried there.
+
 ## Use it on your own agent
 
 1. **Set up:** `python evolver.py init "path/to/your-agent"`

@@ -78,7 +78,7 @@ The allowed / not allowed split is a guess from the names. Check it, and fill in
 
     python quickstart.py "path\to\your-agent" --auto
 
-This installs the session-end hook, schedules a daily run, and turns auto-apply on with a spending cap per run (quickstart uses $3 by default; change it with `--cap`). It shows exactly what it will do and asks first (`--yes` skips the question). Every safety gate stays in force: a fix is applied only if the holdout score, the repeated confirmation runs, the judge-agreement check and `rules.json` all allow it. Every applied fix is backed up, and `python evolver.py undo` reverses it. See "Auto integration" below for the details.
+This accepts the drafted tests, writes a placeholder `rules.json`, installs the session-end hook, schedules a daily run, and turns auto-apply on with a spending cap per run (quickstart uses $3 by default; change it with `--cap`). It shows exactly what it will do and asks first (`--yes` skips the question). Every safety gate stays in force: a fix is applied only if the holdout score, the repeated confirmation runs, the judge-agreement check and `rules.json` all allow it. Every applied fix is backed up, and `python evolver.py undo` reverses it. See "Auto integration" below for the details.
 ### Turn it off
 
     python quickstart.py "path\to\your-agent" --propose-only
@@ -89,7 +89,7 @@ This installs the session-end hook, schedules a daily run, and turns auto-apply 
 ### Read this before trusting `--auto`
 
 - The tests decide every result. `init` drafts them with Claude from `CLAUDE.md` alone, and they may be wrong. Before the loop runs on a real agent, review `.evolver/context.md` and `.evolver/tests.json`: delete the DRAFT line and keep only the list.
-- `--accept-drafts` skips that review and `--starter-rules` writes a one-line placeholder `rules.json`. They are for trying the tool. A loop that applies fixes against unreviewed tests can move the agent toward the wrong goal.
+- `--auto` accepts the drafted tests without review and writes a one-line placeholder `rules.json`, so one command sets everything up. A loop that applies fixes against unreviewed tests can move the agent toward the wrong goal. To review first, add `--review-first`. To keep it from applying anything on its own, add `--propose-only`.
 - A daily run can spend up to the cap every day, for each agent.
 - The hook saves real conversations to `.evolver/inbox/`. It is git-ignored: keep it private.
 - Tested so far on Windows, on the examples and on one real agent. A scheduled run firing on its own and applying a fix has not been seen yet.
@@ -307,6 +307,33 @@ use Git Bash or WSL.
 | `max_run_cost_usd` | `1.0` | Spending cap for one run |
 | `cleanup` | `false` | Merge repeated instructions at the end (one more measurement) |
 | `auto_apply` | `true` | Apply a verified fix automatically, only when every safety condition holds |
+
+## Known issues found in testing
+
+These came from watching real runs. Please read them before you rely on the tool.
+
+- **Tested on Windows only,** with a handful of Claude Code agents. Other systems and other agent types are untested.
+- **The daily task is new and lightly tested.** `quickstart.py --auto` creates it through `scheduled_run.py` (Windows only).
+  In testing it started on time with no console window, retried once after a failure, and wrote a `FAILED_<time>.md` note
+  in `.evolver/notifications` when it still failed. It is also set to run as soon as possible after a missed start and to
+  run on battery, but that catch-up has not been tested.
+- **Earlier versions of the schedule had real problems:** one run never started (cause not found), one crashed while
+  Claude Code was updating itself and left no failure notice, and a console window popped up. A full real run through the
+  new task, with its many Claude Code calls, has not been checked for hidden windows yet.
+- **A failed run is retried once,** which can cost the run again. Check `python evolver.py report` now and then.
+- **Hooks may run during tests.** The tool copies an agent's settings into its test runs. If the agent's
+  `.claude/settings.json` has hooks, remove them in the copy you test.
+- **The tests decide every result.** Starter tests are drafted by Claude from `CLAUDE.md` alone, and the judge is a small
+  model. The thresholds (85% holdout, 3-run confirmation) are defaults chosen by the author, not measured.
+- **Costs are real.** Each run uses your Claude plan (roughly $0.5 to $2 equivalent in our runs). A daily schedule repeats
+  that every day.
+- **Not compared with other tools yet.**
+- **License: not added yet.**
+
+## Feedback
+
+Open a GitHub issue. Please include your Windows and Python versions, the output of `claude --version`, what you ran,
+and the SUMMARY block from the end of the run. Do not paste private agent text.
 
 ## Known limits (honest)
 

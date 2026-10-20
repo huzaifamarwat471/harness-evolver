@@ -29,6 +29,7 @@ Use a COPY of the agent folder while you learn the tool.
 """
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -284,6 +285,23 @@ def ask_yes(prompt):
         return False
 
 
+def schedule_command(agent, evolver, run_time, assume_yes, windows):
+    """The command that creates the daily task. On Windows it is scheduled_run.py (no console window, one retry,
+    a failure note, and a missed run is caught up). Elsewhere, or if that file is missing, the tool's own 'schedule'."""
+    wrapper = Path(__file__).resolve().with_name("scheduled_run.py")
+    if windows and wrapper.exists():
+        cmd = [sys.executable, str(wrapper), "install", str(agent), "--evolver", str(evolver)]
+        if run_time:
+            cmd += ["--time", run_time]
+        if assume_yes:
+            cmd += ["--yes"]
+        return cmd, "python scheduled_run.py install"
+    cmd = [sys.executable, str(evolver), "schedule", str(agent)]
+    if run_time:
+        cmd += ["--time", run_time]
+    return cmd, "python evolver.py schedule"
+
+
 def setup_auto(agent, evolver, evo, cap, run_time, starter, assume_yes, apply_on):
     """Turn on the continuous loop. Returns True when done, None if the user declined, False on failure."""
     rules, cfg = evo / "rules.json", evo / "config.json"
@@ -349,13 +367,13 @@ def setup_auto(agent, evolver, evo, cap, run_time, starter, assume_yes, apply_on
     say("PASS", "Session-end hook installed")
 
     print()
-    say("INFO", "Running: python evolver.py schedule (it asks before creating anything)")
-    cmd = [sys.executable, str(evolver), "schedule", str(agent)]
-    if run_time:
-        cmd += ["--time", run_time]
+    cmd, label = schedule_command(agent, evolver, run_time, assume_yes, os.name == "nt")
+    say("INFO", "Running: %s (it asks before creating anything)" % label)
     r = subprocess.run(cmd)
-    if r.returncode != 0:
-        say("WARN", "schedule did not finish (exit %d). Run it yourself: python evolver.py schedule \"%s\"" % (r.returncode, agent))
+    if r.returncode == 3:
+        say("INFO", "The daily task was not created because you declined. The rest of the setup is done.")
+    elif r.returncode != 0:
+        say("WARN", "the daily task was not created (exit %d). Run it yourself: %s \"%s\"" % (r.returncode, label, agent))
     else:
         say("PASS", "Daily run scheduled (see its output above for the time and how to remove it)")
     return True
@@ -469,7 +487,11 @@ def main():
     ap.add_argument("--accept-drafts", action="store_true",
                     help="accept the AI-drafted tests and context WITHOUT review (marked, with originals kept)")
     ap.add_argument("--auto", action="store_true",
-                    help="turn on the continuous loop: session-end hook, daily scheduled run, auto-apply")
+                    help="one command for the continuous loop: accepts the drafted tests, writes starter rules, "
+                         "installs the session-end hook and a daily scheduled run, and turns auto-apply on")
+    ap.add_argument("--review-first", action="store_true",
+                    help="with --auto: do NOT accept the drafted tests or write starter rules; stop so you can "
+                         "review them first")
     ap.add_argument("--propose-only", action="store_true",
                     help="never apply fixes on its own: with --auto the loop only proposes; alone it switches auto-apply off")
     ap.add_argument("--off", action="store_true",
@@ -513,6 +535,14 @@ def main():
     if args.off and (args.auto or args.propose_only or args.accept_drafts or args.tools):
         print("--off cannot be combined with --auto, --propose-only, --accept-drafts or --tools.")
         return 1
+
+    if args.review_first and not args.auto:
+        print("--review-first only makes sense together with --auto.")
+        return 1
+    if args.auto and not args.review_first:
+        # one command: accept the drafts and write starter rules (both are marked and can be undone)
+        args.accept_drafts = True
+        args.starter_rules = True
 
     # turning things off needs no setup checks
     if args.off:
@@ -578,7 +608,7 @@ def main():
             print("\nStopped before turning the loop on: the tests are still unreviewed drafts, and the loop "
                   "would be refused every day.")
             print("Either review them (delete the DRAFT line in context.md, keep only the list in tests.json),")
-            print("or rerun with --accept-drafts to accept them without review.")
+            print("or rerun without --review-first to accept them without review.")
             return 0
         apply_on = not args.propose_only
         result = setup_auto(agent, evolver, evo, args.cap, args.time, args.starter_rules, args.yes, apply_on)

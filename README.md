@@ -143,7 +143,7 @@ Tell the tool both in `.evolver/config.json`:
   in on stdin (or replaces `{input}`); `{python}` means the Python running the tool. It prints the answer, or JSON
   with `"result"` and optionally `"total_cost_usd"`. Your runner must never take real actions (sending messages,
   writing to databases); the tool cannot block that for you.
-- See `test-agents/lesson-planning-assistant` for a working example.
+- See `checks/fixtures/examples/lesson-planning-assistant` for a working example.
 
 ### Continual mode: learn from real conversations (optional)
 

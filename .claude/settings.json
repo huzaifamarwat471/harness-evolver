@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/api_secret.txt)",
+      "Bash(rm -rf *)"
+    ]
+  }
+}

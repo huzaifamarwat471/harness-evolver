@@ -4,7 +4,16 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(**/api_secret.txt)",
-      "Bash(rm -rf *)"
+      "Bash(rm -rf *)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Bash(rm -r*)",
+      "Bash(rm -f*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git reset --hard*)",
+      "Edit(**/examples/**)",
+      "Write(**/examples/**)"
     ]
   }
 }

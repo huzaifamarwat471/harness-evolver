@@ -5,7 +5,8 @@ Show this table to the user exactly as written, and run nothing:
 
 | Command | What it does | Cost |
 |---|---|---|
-| /evolver-check | Run the tool's own self-test | free, about a minute |
+| /evolver-help | Show this table | free |
+| /evolver-check | Run the tool's own self-test | free, about 2 minutes |
 | /evolver-setup <agent folder> | Set up an agent folder: checks your setup and drafts starter tests | a little Claude plan |
 | /evolver-report <agent folder> | Show saved results and scores | free |
 | /evolver-status <agent folder> | Show whether the continuous loop is on, and what it has done | free |

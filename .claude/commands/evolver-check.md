@@ -1,5 +1,5 @@
 ---
-description: Check the tool works (free, about a minute)
+description: Check the tool works (free, about 2 minutes)
 ---
 Run this from the current folder. The folder must contain evolver.py; if it does not, stop and tell the user to start Claude Code in the Harness Evolver folder.
 

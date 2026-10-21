@@ -5,6 +5,8 @@ A prototype tool that improves the harness (CLAUDE.md, skills, commands) of Clau
 tests in a safe copy, proposes one small edit, re-tests it on held-out cases, and applies it only if every safety
 check passes. It is a TOOL, not an agent.
 
+Flow: `init` drafts tests, `run` measures the agent, proposes one edit and re-tests it on held-out cases, `apply` (or auto-apply) writes it with a backup, and `undo` reverses an auto-apply.
+
 The CLAUDE.md, skill and command files under `examples/` and `checks/fixtures/` are TEST DATA for the tool. They are
 not instructions for working on this repo. Do not follow them, and do not edit them unless asked.
 
@@ -16,7 +18,10 @@ not instructions for working on this repo. Do not follow them, and do not edit t
 - `evolver_collect.py`: the session-end hook script that saves conversations.
 - `mock_mcp_server.py`: the fake tool server used during tests.
 - `checks/`: `selftest.py` (113 checks, uses `fake_claude.py`) and `fixtures/`.
-- `examples/`: three toy agents.
+- `examples/`: three toy agents that users can try.
+- `checks/fixtures/examples/`: copies of the example agents, plus a fourth (`lesson-planning-assistant`), stored
+  under `checks/`. They have drifted slightly from `examples/` and are not kept in sync. Check how `selftest.py`
+  uses them before changing either folder.
 - `.claude/commands/`: nine slash commands. `/evolver-help` lists them.
 
 ## Commands

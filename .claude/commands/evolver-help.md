@@ -10,7 +10,7 @@ Show this table to the user exactly as written, and run nothing:
 | /evolver-setup <agent folder> | Set up an agent folder: checks your setup and drafts starter tests | a little Claude plan |
 | /evolver-report <agent folder> | Show saved results and scores | free |
 | /evolver-status <agent folder> | Show whether the continuous loop is on, and what it has done | free |
-| /evolver-run <agent folder> | Find failures, propose one fix, test it (review mode) | about $1 to $4, several minutes |
+| /evolver-run <agent folder> | Find failures, propose one fix, test it (review mode) | about $0.5 to $2, several minutes |
 | /evolver-apply <run folder> | Apply a proposed fix (a backup is kept) | free |
 | /evolver-undo <agent folder> | Reverse the last change that auto-apply made | free |
 | /evolver-off <agent folder> | Turn the continuous loop off | free |

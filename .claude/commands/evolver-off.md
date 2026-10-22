@@ -1,5 +1,5 @@
 ---
-description: Turn the continuous loop off (auto-apply, daily schedule, session-end hook)
+description: Turn the automatic loop off for an agent (auto-apply, daily schedule, session-end hook). Fixes already applied stay, and /evolver-undo reverses the last auto-applied one.
 argument-hint: <agent folder>
 ---
 Turn Harness Evolver off for this agent: $ARGUMENTS

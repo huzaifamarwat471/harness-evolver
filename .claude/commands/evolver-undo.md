@@ -1,5 +1,5 @@
 ---
-description: Reverse the last change that auto-apply made (restores the old files from the backup)
+description: Reverse the last change that auto-apply made, from its backup. Only for auto-applied changes, and it refuses if the file was edited since.
 argument-hint: <agent folder>
 ---
 Reverse the last auto-applied change for this agent: $ARGUMENTS

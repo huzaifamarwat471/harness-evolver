@@ -1,5 +1,5 @@
 ---
-description: Show saved results for an agent (free, read-only)
+description: Show an agent's saved results (scores before and after, and cost, for each run). Free and read-only. To see whether the loop is on, use /evolver-status.
 argument-hint: <agent folder>
 ---
 Show the saved results for this agent: $ARGUMENTS

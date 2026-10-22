@@ -1,5 +1,5 @@
 ---
-description: Set up an agent folder for Harness Evolver (uses a little Claude plan to draft tests)
+description: Set up an agent folder. It finds the harness files and drafts tests and context, using a little of your Claude plan. It does not run the loop.
 argument-hint: <agent folder> [--tools a,b --server NAME]
 ---
 Set up an agent for Harness Evolver. Arguments: $ARGUMENTS

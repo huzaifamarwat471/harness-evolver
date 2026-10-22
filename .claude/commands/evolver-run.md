@@ -1,5 +1,5 @@
 ---
-description: Run the improve loop on an agent copy (review mode, uses about $1 to $4 of your Claude plan)
+description: Run the improve loop on an agent copy. It shows the cost first, proposes one fix at a time, and applies nothing. A spending cap (default $1) stops it.
 argument-hint: <agent folder>
 ---
 Run Harness Evolver on this agent: $ARGUMENTS
@@ -8,7 +8,7 @@ Do these checks first, and stop at the first one that fails:
 1. The current folder must contain evolver.py. If the arguments are empty, ask for the agent folder and stop.
 2. Read <folder>\.evolver\context.md and <folder>\.evolver\tests.json. If context.md still starts with a line beginning DRAFT, or tests.json is still an object with a "draft" key, stop and tell the user the drafts must be reviewed first (the tool refuses to run on unreviewed drafts).
 3. Read <folder>\.evolver\config.json and look for <folder>\.evolver\rules.json. If rules.json exists and "auto_apply" is true or missing, STOP. This run could apply a fix to the agent on its own. Tell the user, and suggest running python quickstart.py "<folder>" --propose-only in a terminal before trying again.
-4. Tell the user this run takes several minutes and uses roughly $1 to $4 of their Claude plan, then wait for an explicit "yes" in the chat. Do not continue without it.
+4. Tell the user this run takes several minutes and uses roughly $0.5 to $2 of their Claude plan (the spending cap, $1 unless changed in config.json, stops it earlier), then wait for an explicit "yes" in the chat. Do not continue without it.
 
 Then run:
 

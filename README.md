@@ -119,7 +119,7 @@ If you work in Claude Code, start it in this folder (`claude`). The commands in 
 | `/evolver-setup <agent folder>` | Same as `quickstart.py`: checks your setup and drafts starter tests | a little Claude plan |
 | `/evolver-report <agent folder>` | Shows saved results | free |
 | `/evolver-status <agent folder>` | Shows whether the loop is on, and what it has done | free |
-| `/evolver-run <agent folder>` | Finds failures and proposes one fix (review mode) | about $1 to $4 |
+| `/evolver-run <agent folder>` | Finds failures and proposes one fix (review mode) | about $0.5 to $2 |
 | `/evolver-apply <run folder>` | Applies a proposed fix after you say yes (a backup is kept) | free |
 | `/evolver-undo <agent folder>` | Reverses the last change that auto-apply made | free |
 | `/evolver-off <agent folder>` | Turns the continuous loop off | free |

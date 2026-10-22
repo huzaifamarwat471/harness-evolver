@@ -1,5 +1,5 @@
 ---
-description: Show whether the continuous loop is on for an agent, and what it has done (read-only)
+description: Show whether the automatic loop is on for an agent and what it has done (read-only). For scores per run, use /evolver-report.
 argument-hint: <agent folder>
 ---
 Report the Harness Evolver state of this agent: $ARGUMENTS

@@ -1,5 +1,5 @@
 ---
-description: Apply a proposed fix from a finished run (writes into the agent, with a backup)
+description: Apply a fix that a finished run proposed. It writes into the agent's files and keeps a backup. Needs the run folder. To reverse an auto-applied change, use /evolver-undo.
 argument-hint: <run folder, as printed at the end of a run>
 ---
 Apply the proposed change from this run folder: $ARGUMENTS

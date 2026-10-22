@@ -254,7 +254,36 @@ def main():
     else:
         check("the hook script exists to dry-run", False, "missing: .claude/hooks/py_compile_check.py")
 
-    # 14. optional: run the real self-test and compare
+    # 14. slash command descriptions: distinct, short, safe for YAML, and commands that could be confused name each other
+    descs = {}
+    for p in cmd_files:
+        m = re.match(r"---\n(.*?)\n---\n", read(p), re.S)
+        d = re.search(r"^description:\s*(.+)$", m.group(1), re.M) if m else None
+        descs[p.stem] = d.group(1).strip() if d else ""
+    problems, seen = [], {}
+    for n, d in descs.items():
+        if len(d) > 200:
+            problems.append("%s: description is %d characters (limit 200)" % (n, len(d)))
+        if ": " in d or " #" in d:
+            problems.append("%s: a colon or # inside the description can break the frontmatter" % n)
+        if d in seen:
+            problems.append("%s and %s have the same description" % (n, seen[d]))
+        seen[d] = n
+    for a, b in (("evolver-apply", "evolver-undo"), ("evolver-status", "evolver-report"), ("evolver-off", "evolver-undo")):
+        if a in descs and b in descs and ("/" + b) not in descs[a] and ("/" + a) not in descs[b]:
+            problems.append("%s and %s could be confused, and neither description names the other" % (a, b))
+    check("command descriptions are distinct, short, YAML-safe, and confusable pairs name each other", not problems,
+          "; ".join(problems))
+
+    # 15. cost ranges quoted in the documents agree with each other
+    ranges = {}
+    for label, t in [("CLAUDE.md", claude_md), ("README.md", readme)] + [(p.name, read(p)) for p in cmd_files]:
+        for m in re.finditer(r"\$(\d+(?:\.\d+)?) to \$(\d+(?:\.\d+)?)", t):
+            ranges.setdefault((m.group(1), m.group(2)), []).append("%s:%d" % (label, line_of(t, m.start())))
+    check("cost ranges agree across the documents (%s)" % (", ".join("$%s to $%s" % k for k in sorted(ranges)) or "none found"),
+          len(ranges) <= 1, "; ".join("$%s to $%s at %s" % (k[0], k[1], ", ".join(v)) for k, v in sorted(ranges.items())))
+
+    # 16. optional: run the real self-test and compare
     if run_selftest:
         print("running checks/selftest.py (about 2 minutes)...")
         r = subprocess.run([sys.executable, str(ROOT / "checks" / "selftest.py")], capture_output=True, text=True,

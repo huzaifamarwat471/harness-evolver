@@ -15,6 +15,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -228,7 +229,32 @@ def main():
     except (OSError, ValueError, SyntaxError) as e:
         check("README settings table matches the defaults in evolver.py", False, str(e))
 
-    # 13. optional: run the real self-test and compare
+    # 13. dry-run the hook: it must catch a broken file and accept a good one, whatever the input encoding
+    hook_path = ROOT / ".claude" / "hooks" / "py_compile_check.py"
+    if hook_path.exists():
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "bad.py"
+            bad.write_text("def broken(:\n", encoding="utf-8")
+            good = Path(d) / "good.py"
+            good.write_text("print('ok')\n", encoding="utf-8")
+
+            def feed(path, encode=lambda s: s.encode("utf-8")):
+                payload = encode(json.dumps({"tool_input": {"file_path": str(path)}}))
+                return subprocess.run([sys.executable, str(hook_path)], input=payload, capture_output=True, timeout=60)
+
+            cases = [("broken file", feed(bad), 2), ("good file", feed(good), 0),
+                     ("broken file, UTF-8 with BOM", feed(bad, lambda s: b"\xef\xbb\xbf" + s.encode("utf-8")), 2),
+                     ("broken file, UTF-16", feed(bad, lambda s: s.encode("utf-16")), 2)]
+            wrong = ["%s gave exit %d (wanted %d)" % (n, r.returncode, want) for n, r, want in cases
+                     if r.returncode != want]
+            if cases[0][1].returncode == 2 and b"Syntax error" not in cases[0][1].stderr:
+                wrong.append("the message for a broken file does not say 'Syntax error'")
+        check("the hook catches a broken file and accepts a good one (%d dry runs)" % len(cases), not wrong,
+              "; ".join(wrong))
+    else:
+        check("the hook script exists to dry-run", False, "missing: .claude/hooks/py_compile_check.py")
+
+    # 14. optional: run the real self-test and compare
     if run_selftest:
         print("running checks/selftest.py (about 2 minutes)...")
         r = subprocess.run([sys.executable, str(ROOT / "checks" / "selftest.py")], capture_output=True, text=True,

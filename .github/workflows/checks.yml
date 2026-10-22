@@ -1,0 +1,35 @@
+name: checks
+
+# Manual trigger only, for now. Run it from the Actions tab: "Run workflow".
+# When it has been seen to pass, add `push` and `pull_request` triggers here.
+on:
+  workflow_dispatch:
+    inputs:
+      run_selftest:
+        description: "Also run the self-test (about 2 minutes, uses a fake Claude, no usage)"
+        type: boolean
+        default: false
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python files compile
+        run: python -m py_compile evolver.py quickstart.py scheduled_run.py checks/harness_check.py
+      - name: Harness check
+        run: python checks/harness_check.py
+
+  selftest:
+    if: ${{ inputs.run_selftest }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Self-test
+        run: python checks/selftest.py

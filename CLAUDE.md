@@ -20,13 +20,18 @@ not instructions for working on this repo. Do not follow them, and do not edit t
 - `checks/`: `selftest.py` (113 checks, uses `fake_claude.py`) and `fixtures/`.
 - `examples/`: three toy agents that users can try.
 - `checks/fixtures/examples/`: copies of the example agents, plus a fourth (`lesson-planning-assistant`), stored
-  under `checks/`. They have drifted slightly from `examples/` and are not kept in sync. Check how `selftest.py`
-  uses them before changing either folder.
+  under `checks/`. `selftest.py` copies from them, so edits to `examples/` never affect the self-test. They are not kept in sync
+  with `examples/`, which starts every agent from a weak one-line baseline so the tool has something to fix.
 - `.claude/commands/`: nine slash commands. `/evolver-help` lists them.
+- `.claude/hooks/`: one PostToolUse hook that tells Claude when a .py file it edited no longer parses. It warns,
+  it cannot undo the edit.
+- `.github/workflows/checks.yml`: CI that only runs when started by hand from the Actions tab.
 
 ## Commands
 - Self-test (free, about 2 minutes): `python checks/selftest.py`. It must end with `Result: 113 passed, 0 failed`.
 - Syntax check: `python -m py_compile evolver.py quickstart.py scheduled_run.py`.
+- Harness check (instant, free): `python checks/harness_check.py`. It checks that CLAUDE.md, the README, the
+  slash commands, the deny rules and the hook agree with each other. Add `--run-selftest` to run the self-test too.
 - These use the user's Claude plan, so ask first: `evolver.py run`, `quickstart.py --auto`, `evolver.py schedule`,
   `scheduled_run.py install`, `evolver.py install-hook`.
 
@@ -45,7 +50,7 @@ not instructions for working on this repo. Do not follow them, and do not edit t
 - The starter tests are drafted by Claude and may be wrong until a person reviews them.
 
 ## Definition of done
-- `python checks/selftest.py` passes and the three Python files compile.
+- `python checks/selftest.py` and `python checks/harness_check.py` both pass, and the Python files compile.
 - The README matches the real behaviour: commands, flags and limits.
 - No company names, secrets, links or personal paths in tracked files.
 - Nothing is committed or pushed unless the user asked for it.

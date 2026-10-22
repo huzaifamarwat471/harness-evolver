@@ -15,5 +15,18 @@
       "Edit(**/examples/**)",
       "Write(**/examples/**)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/py_compile_check.py\""
+          }
+        ]
+      }
+    ]
   }
 }

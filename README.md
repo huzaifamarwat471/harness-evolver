@@ -10,16 +10,28 @@ cases. It finds what the agent keeps getting wrong, proposes one small fix, test
 and asks you to approve. By default your agent's files are not changed until you run `apply`. With auto-apply on,
 a verified fix is applied on its own (backed up, and `undo` reverses it).
 
+## Start here
+
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 113 passed, 0 failed`.
+2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
+   uses a little of your Claude plan.
+3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
+   time, and, unless you turned on auto-apply, changes nothing until you run `apply`.
+
+In Claude Code, open this folder and type `/evolver-help`. Please read "Known issues found in testing" below
+before you rely on it.
+
 ## How it works
 
-1. Runs your agent through Claude Code (`claude -p`) on each test case, **2 times each**.
-2. A case counts as a real failure only if it fails **every** time. Flaky cases are ignored, so it doesn't fix noise.
+1. Runs your agent through Claude Code (`claude -p`) on each test case: once each by default, more with `repeats`.
+2. A case counts as a real failure only if it fails **every** run. A flaky case (some runs pass, some fail) is
+   ignored unless you set `min_pass_rate`, so it doesn't chase noise.
 3. A fixer reads the failures and your agent's `context.md`, and proposes **one small edit** to one harness file.
 4. Safety checks run before testing (see below).
 5. The edited harness is tested on the train cases and on **holdout** cases the fixer never saw.
 6. It is kept only if no score drops, at least one improves, and no always-passing case starts failing.
 7. **You approve or reject** each change. It then looks for the next problem.
-8. At the end, it offers to tidy up repeated instructions (again tested, and again your choice).
+8. Optional (`"cleanup": true`): at the end it can merge repeated instructions, tested the same way.
 
 ## Safety
 
@@ -59,6 +71,9 @@ A third, `examples/finance-assistant`, uses **fake Odoo tools** (see below):
 ```
 python evolver.py run examples/finance-assistant
 ```
+
+Each example starts from a deliberately weak one-line `CLAUDE.md`, so there is something to fix. Each has
+`auto_apply` switched off, so a run only proposes a fix and changes nothing until you run `apply`.
 
 ## One-command setup (quickstart)
 
@@ -296,7 +311,7 @@ use Git Bash or WSL.
 | `worker_model` | `sonnet` | Model your agent runs on during tests |
 | `refiner_model` | `opus` | Model that proposes fixes (few calls, so the strongest model is worth it) |
 | `judge_model` | `haiku` | Answers rubric questions and safety reviews |
-| `repeats` | `2` | Runs per test case (more = less noise, more usage) |
+| `repeats` | `1` | Runs per test case while exploring (more = less noise, more usage). Auto-apply re-confirms the final version with 3 runs |
 | `max_rounds` / `attempts_per_round` | `3` / `3` | How long it keeps trying |
 | `parallel_calls` | `3` | Claude Code calls at the same time |
 | `max_edit_chars` / `max_edit_lines` | `800` / `10` | Size limit of one edit |

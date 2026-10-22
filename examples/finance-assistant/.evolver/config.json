@@ -3,5 +3,6 @@
   "refiner_model": "opus",
   "judge_model": "haiku",
   "repeats": 1,
-  "max_rounds": 1
+  "max_rounds": 1,
+  "auto_apply": false
 }

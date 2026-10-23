@@ -283,7 +283,16 @@ def main():
     check("cost ranges agree across the documents (%s)" % (", ".join("$%s to $%s" % k for k in sorted(ranges)) or "none found"),
           len(ranges) <= 1, "; ".join("$%s to $%s at %s" % (k[0], k[1], ", ".join(v)) for k, v in sorted(ranges.items())))
 
-    # 16. optional: run the real self-test and compare
+    # 16. commands hand folder paths to python inside double quotes, never as a raw $ARGUMENTS (a Unix-style shell
+    #     drops the backslashes of an unquoted Windows path, and the tool then looks in the wrong place)
+    raw = []
+    for p in cmd_files:
+        for i, line in enumerate(read(p).split("\n"), 1):
+            if line.lstrip().startswith("python ") and "$ARGUMENTS" in line:
+                raw.append("%s:%d" % (p.name, i))
+    check("no command runs python with an unquoted $ARGUMENTS", not raw, "unquoted at " + ", ".join(raw))
+
+    # 17. optional: run the real self-test and compare
     if run_selftest:
         print("running checks/selftest.py (about 2 minutes)...")
         r = subprocess.run([sys.executable, str(ROOT / "checks" / "selftest.py")], capture_output=True, text=True,

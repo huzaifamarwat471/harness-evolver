@@ -11,8 +11,8 @@ Tell the user what undo does, then ask them to reply "yes":
 - It refuses if the file was edited after the auto-apply, so nothing the user wrote is lost.
 - It does NOT reverse a manual apply. For that, the old file is in <agent folder>\.evolver\backups and can be copied back by hand.
 
-After an explicit yes, run (folder paths with spaces must be in double quotes):
+After an explicit yes, run this, with the folder path inside double quotes (a Windows path with backslashes is only read correctly inside double quotes; forward slashes also work):
 
-python evolver.py undo $ARGUMENTS
+python evolver.py undo "<folder>"
 
 Show the output unchanged. If it refuses, explain why in one sentence and do not try to force it.

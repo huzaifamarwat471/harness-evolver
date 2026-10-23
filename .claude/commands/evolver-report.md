@@ -6,9 +6,9 @@ Show the saved results for this agent: $ARGUMENTS
 
 The current folder must contain evolver.py; if it does not, stop and tell the user to start Claude Code in the Harness Evolver folder. If the arguments are empty, ask for the agent folder and stop.
 
-Run this (folder paths with spaces must be in double quotes):
+Run this, with the folder path from the arguments inside double quotes (a Windows path with backslashes is only read correctly inside double quotes; forward slashes also work):
 
-python evolver.py report $ARGUMENTS
+python evolver.py report "<folder>"
 
 Show the output unchanged, then explain it in 3 short bullets:
 - Each run row shows the score before and after (train, then holdout, the cases the fix has not seen).

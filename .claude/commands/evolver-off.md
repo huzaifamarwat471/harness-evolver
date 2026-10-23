@@ -12,8 +12,8 @@ Tell the user what will happen, then ask them to reply "yes":
 - Only the tool's own session-end hook is removed from .claude\settings.local.json; other settings stay.
 - Saved conversations in .evolver\inbox and fixes that were already applied are NOT touched.
 
-After an explicit yes, run (folder paths with spaces must be in double quotes):
+After an explicit yes, run this, with the folder path inside double quotes (a Windows path with backslashes is only read correctly inside double quotes; forward slashes also work):
 
-python quickstart.py $ARGUMENTS --off --yes
+python quickstart.py "<folder>" --off --yes
 
 Show the output unchanged. Then, only if the folder .evolver\inbox exists, remind the user that saved conversations are still there and can be deleted if they are not wanted.

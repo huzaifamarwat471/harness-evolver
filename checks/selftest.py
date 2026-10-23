@@ -464,5 +464,15 @@ check("run refuses unreviewed drafts", "still a draft" in out)
 out = run_quietly(["init", str(tmp)])
 check("init never overwrites existing files", "Nothing was overwritten" in out)
 
+print("\n19. The fixer is shown long files and answers, not only the first part")
+long_files = {"SKILL.md": "A" * 7000 + "END_MARKER"}
+check("a long file is shown in full when the limit allows it",
+      "END_MARKER" in ev.fixer_files_text(long_files, {"fixer_file_chars": 12000}))
+cut = ev.fixer_files_text(long_files, {"fixer_file_chars": 6000})
+check("a file longer than the limit is cut, and the fixer is told so", "END_MARKER" not in cut and "not shown" in cut)
+check("by default a file is shown up to the size it may grow to, and answers are cut at their limit",
+      ev.DEFAULTS["fixer_file_chars"] >= ev.DEFAULTS["max_part_chars"]
+      and len(ev.fixer_answer_text("x" * 3000, {"fixer_answer_chars": 1500})) == 1500)
+
 print(f"\nResult: {passed} passed, {failed} failed" + (f", {skipped} skipped" if skipped else ""))
 sys.exit(1 if failed else 0)

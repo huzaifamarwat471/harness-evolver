@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 113 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 116 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -58,7 +58,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 113 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 116 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -315,6 +315,8 @@ use Git Bash or WSL.
 | `max_rounds` / `attempts_per_round` | `3` / `3` | How long it keeps trying |
 | `parallel_calls` | `3` | Claude Code calls at the same time |
 | `max_edit_chars` / `max_edit_lines` | `800` / `10` | Size limit of one edit |
+| `fixer_file_chars` | `12000` | How much of each harness file the fixer is shown. Raise it for long skill files |
+| `fixer_answer_chars` | `1500` | How much of each failing answer the fixer is shown |
 | `strict_mcp` | `true` | No MCP servers during tests |
 | `tool_whitelist` | `true` | Agent may only use Read, Glob, Grep, Skill during tests |
 | `allow_subagents` | `false` | Let the agent use (and the tool edit) subagents |

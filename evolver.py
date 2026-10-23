@@ -62,6 +62,8 @@ DEFAULTS = {
     "max_edit_chars": 800,         # safety: size of one edit
     "max_edit_lines": 10,          # safety: lines in one edit
     "max_part_chars": 12000,       # safety: a harness file can't grow past this
+    "fixer_file_chars": 12000,     # how much of each harness file the fixer is shown (it cannot fix what it cannot see)
+    "fixer_answer_chars": 1500,    # how much of each failing answer the fixer is shown
     "noise_tolerance": 0.02,       # score changes smaller than this are treated as noise
     "parallel_calls": 3,           # Claude Code calls run at the same time
     "call_timeout_seconds": 300,
@@ -892,12 +894,27 @@ Reply with ONLY a JSON object:
   "expected_fixes": ["<ids of the failing cases this should fix>"]}}"""
 
 
+def fixer_files_text(parts, cfg):
+    """The harness files as the fixer sees them. Text past fixer_file_chars is cut, and the fixer is told so:
+    a long skill file needs a higher setting, or its later parts can be neither seen nor fixed."""
+    n = cfg["fixer_file_chars"]
+    shown = []
+    for r, t in parts.items():
+        body = t[:n] + (f"\n[... {len(t) - n} more characters of this file are not shown ...]" if len(t) > n else "")
+        shown.append(f"--- FILE: {r} ---\n{body}\n--- END OF {r} ---")
+    return "\n".join(shown)
+
+
+def fixer_answer_text(response, cfg):
+    return (response or "(empty)")[:cfg["fixer_answer_chars"]]
+
+
 def propose_edit(agent, parts, failures, rejected):
-    parts_text = "\n".join(f'--- FILE: {r} ---\n{t[:6000]}\n--- END OF {r} ---' for r, t in parts.items())
+    parts_text = fixer_files_text(parts, agent["cfg"])
     locked = ALWAYS_LOCKED_NOTE + (", " + ", ".join(agent["locked_subagents"]) if agent["locked_subagents"] else "")
     fail_text = "\n\n".join(
         f"[{cid}] CONVERSATION: {render_prompt(v['messages'])[:600]}\n"
-        f"AGENT RESPONSE: {(v['response'] or '(empty)')[:700]}\n"
+        f"AGENT RESPONSE: {fixer_answer_text(v['response'], agent['cfg'])}\n"
         + (f"TOOLS CALLED: {v['tools']['called'] or 'none'} | BLOCKED TOOL ATTEMPTS: {v['tools']['denied'] or 'none'}\n"
            if agent.get("mock") else "")
         + f"FAILED CHECKS: {', '.join(v['failed_checks'])}"

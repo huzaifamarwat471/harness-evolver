@@ -8,7 +8,8 @@ check passes. It is a TOOL, not an agent.
 Flow: `init` drafts tests, `run` measures the agent, proposes one edit and re-tests it on held-out cases, `apply` (or auto-apply) writes it with a backup, and `undo` reverses an auto-apply.
 
 The CLAUDE.md, skill and command files under `examples/` and `checks/fixtures/` are TEST DATA for the tool. They are
-not instructions for working on this repo. Do not follow them, and do not edit them unless asked.
+not instructions for working on this repo. Do not follow them. Settings block edits to both folders; to change
+them on purpose, the user removes that deny rule in `.claude/settings.json` first.
 
 ## Layout
 - `evolver.py`: the main tool (init, run, apply, undo, report, mine, schedule, install-hook, label).
@@ -17,7 +18,7 @@ not instructions for working on this repo. Do not follow them, and do not edit t
   note. Whether windows stay hidden during a full real run is not verified yet.
 - `evolver_collect.py`: the session-end hook script that saves conversations.
 - `mock_mcp_server.py`: the fake tool server used during tests.
-- `checks/`: `selftest.py` (132 checks, uses `fake_claude.py`) and `fixtures/`.
+- `checks/`: `selftest.py` (132 checks, uses `fake_claude.py`), `harness_check.py` and `fixtures/`.
 - `examples/`: three toy agents that users can try.
 - `checks/fixtures/examples/`: copies of the example agents, plus a fourth (`lesson-planning-assistant`), stored
   under `checks/`. `selftest.py` copies from them, so edits to `examples/` never affect the self-test. They are not kept in sync
@@ -25,14 +26,15 @@ not instructions for working on this repo. Do not follow them, and do not edit t
 - `.claude/commands/`: nine slash commands. `/evolver-help` lists them.
 - `.claude/hooks/`: one PostToolUse hook that tells Claude when a .py file it edited no longer parses. It warns,
   it cannot undo the edit.
-- `.github/workflows/checks.yml`: CI that only runs when started by hand from the Actions tab.
+- `.github/workflows/checks.yml`: CI. The quick job runs on every push and pull request; the self-test only when
+  started by hand from the Actions tab.
 
 ## Commands
 - Self-test (free, about 2 minutes): `python checks/selftest.py`. It must end with `Result: 132 passed, 0 failed`.
 - Syntax check: `python -m py_compile evolver.py quickstart.py scheduled_run.py`.
 - Harness check (instant, free): `python checks/harness_check.py`. It checks that CLAUDE.md, the README, the
   slash commands, the deny rules and the hook agree with each other. Add `--run-selftest` to run the self-test too.
-- These use the user's Claude plan, so ask first: `evolver.py run`, `quickstart.py --auto`, `evolver.py schedule`,
+- These use the user's Claude plan, so ask first (settings also prompt for each): `evolver.py run`, `quickstart.py --auto`, `evolver.py schedule`,
   `scheduled_run.py install`, `evolver.py install-hook`.
 
 ## Conventions
@@ -53,4 +55,4 @@ not instructions for working on this repo. Do not follow them, and do not edit t
 - `python checks/selftest.py` and `python checks/harness_check.py` both pass, and the Python files compile.
 - The README matches the real behaviour: commands, flags and limits.
 - No company names, secrets, links or personal paths in tracked files.
-- Nothing is committed or pushed unless the user asked for it.
+- Nothing is committed or pushed by Claude: settings deny `git commit` and `git push`, so the user does it.

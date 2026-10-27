@@ -3,6 +3,9 @@
 **/.env
 **/.env.*
 !.env.example
+*.key
+*.pem
+*credentials*
 __pycache__/
 *.pyc
 *.bak

@@ -29,6 +29,15 @@ REQUIRED_DENY = [
     "Bash(rm -rf *)", "Bash(rm -r*)", "Bash(rm -f*)",
     "Bash(git commit*)", "Bash(git push*)", "Bash(git reset --hard*)",
     "Edit(**/examples/**)", "Write(**/examples/**)",
+    "Bash(cat *.env*)", "Bash(type *.env*)", "Bash(Get-Content *.env*)",
+    "Bash(Remove-Item*)", "Bash(del *)", "Bash(git clean*)", "Bash(git checkout --*)",
+    "Edit(**/checks/fixtures/**)", "Write(**/checks/fixtures/**)",
+]
+
+# The commands that use the user's Claude plan. Settings must make Claude ask before each one.
+REQUIRED_ASK = [
+    "Bash(python evolver.py run*)", "Bash(python evolver.py schedule*)", "Bash(python evolver.py install-hook*)",
+    "Bash(python quickstart.py*)", "Bash(python scheduled_run.py install*)",
 ]
 
 NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
@@ -73,6 +82,9 @@ def main():
         check("settings.json is valid JSON", True)
         gone = [d for d in REQUIRED_DENY if d not in deny]
         check("every required deny rule is present", not gone, "missing: " + "; ".join(gone))
+        ask = settings.get("permissions", {}).get("ask", [])
+        gone_ask = [a for a in REQUIRED_ASK if a not in ask]
+        check("every paid command is on the ask list", not gone_ask, "missing: " + "; ".join(gone_ask))
     except ValueError as e:
         settings = {}
         check("settings.json is valid JSON", False, str(e))

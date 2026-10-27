@@ -13,7 +13,23 @@
       "Bash(git push*)",
       "Bash(git reset --hard*)",
       "Edit(**/examples/**)",
-      "Write(**/examples/**)"
+      "Write(**/examples/**)",
+      "Bash(cat *.env*)",
+      "Bash(type *.env*)",
+      "Bash(Get-Content *.env*)",
+      "Bash(Remove-Item*)",
+      "Bash(del *)",
+      "Bash(git clean*)",
+      "Bash(git checkout --*)",
+      "Edit(**/checks/fixtures/**)",
+      "Write(**/checks/fixtures/**)"
+    ],
+    "ask": [
+      "Bash(python evolver.py run*)",
+      "Bash(python evolver.py schedule*)",
+      "Bash(python evolver.py install-hook*)",
+      "Bash(python quickstart.py*)",
+      "Bash(python scheduled_run.py install*)"
     ]
   },
   "hooks": {

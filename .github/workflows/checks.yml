@@ -1,8 +1,9 @@
 name: checks
 
-# Manual trigger only, for now. Run it from the Actions tab: "Run workflow".
-# When it has been seen to pass, add `push` and `pull_request` triggers here.
+# The quick job runs on every push and pull request. The self-test is manual: Actions tab, "Run workflow".
 on:
+  push:
+  pull_request:
   workflow_dispatch:
     inputs:
       run_selftest:

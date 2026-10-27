@@ -474,5 +474,24 @@ check("by default a file is shown up to the size it may grow to, and answers are
       ev.DEFAULTS["fixer_file_chars"] >= ev.DEFAULTS["max_part_chars"]
       and len(ev.fixer_answer_text("x" * 3000, {"fixer_answer_chars": 1500})) == 1500)
 
+print("\n20. The gate wants a real improvement, not just a higher average")
+def _split(cases, score):
+    return {"score": score, "run_rate": 0.0, "counts": {"error": 0},
+            "cases": {k: {"status": "fail", "passes": p, "runs": 1, "broke": dict(b)} for k, (p, b) in cases.items()}}
+_cfg = {"noise_tolerance": 0.02}
+_before = {"train": _split({"a": (0, {"flaw": 1}), "b": (0, {"flaw": 1})}, 0.75),
+           "holdout": _split({"c": (0, {"flaw": 1, "template": 1, "channel": 1})}, 0.67)}
+_noise = {"train": _split({"a": (0, {"flaw": 1}), "b": (0, {"flaw": 1})}, 0.75),
+          "holdout": _split({"c": (0, {"flaw": 1})}, 0.75)}
+_ok, _why = ev.gate(_before, _noise, _cfg)
+check("a higher average from checks that failed only once is refused as noise", not _ok and "no clear improvement" in _why)
+_real = {"train": _split({"a": (1, {}), "b": (0, {"flaw": 1})}, 0.80),
+         "holdout": _split({"c": (0, {"flaw": 1, "template": 1, "channel": 1})}, 0.67)}
+check("a test that passes more often is accepted", ev.gate(_before, _real, _cfg)[0])
+_partial = {"train": _split({"a": (0, {}), "b": (0, {})}, 0.90),
+            "holdout": _split({"c": (0, {"template": 1, "channel": 1})}, 0.70)}
+check("a repeating failure that gets rarer is accepted even if no test passes in full yet",
+      ev.gate(_before, _partial, _cfg)[0])
+
 print(f"\nResult: {passed} passed, {failed} failed" + (f", {skipped} skipped" if skipped else ""))
 sys.exit(1 if failed else 0)

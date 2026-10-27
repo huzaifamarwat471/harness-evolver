@@ -839,6 +839,16 @@ def evaluate(agent, parts, cases, label, quiet=False, stage="eval"):
 
 # ----------------------------------------------------------------------------- the gate
 
+def failed_check_counts(measure):
+    """How many runs each check failed in, over both splits (the 'broke' counts of every test)."""
+    counts = {}
+    for split in ("train", "holdout"):
+        for c in measure[split]["cases"].values():
+            for name, n in (c.get("broke") or {}).items():
+                counts[name] = counts.get(name, 0) + n
+    return counts
+
+
 def gate(before, after, cfg, require_improvement=True):
     """Returns (accepted, reason)."""
     tol = cfg["noise_tolerance"]
@@ -855,8 +865,19 @@ def gate(before, after, cfg, require_improvement=True):
     at, ah = after["train"]["score"], after["holdout"]["score"]
     if at < bt - tol or ah < bh - tol:
         return False, f"a score dropped (train {bt:.0%}->{at:.0%}, holdout {bh:.0%}->{ah:.0%})"
-    if require_improvement and not (at > bt + tol or ah > bh + tol):
-        return False, f"no clear improvement (train {bt:.0%}->{at:.0%}, holdout {bh:.0%}->{ah:.0%})"
+    # A real improvement: some test passes in MORE runs than before, or a failure that REPEATED (a check that failed in at
+    # least two runs) now happens in fewer runs. A higher average alone is not enough: it includes partial credit, and an
+    # unrelated check that flips by chance can lift it.
+    improved = any(a.get("passes", 0) > before[split]["cases"].get(cid, {}).get("passes", 0)
+                   for split in ("train", "holdout") for cid, a in after[split]["cases"].items())
+    if not improved:
+        fb, fa = failed_check_counts(before), failed_check_counts(after)
+        improved = any(n >= 2 and fa.get(name, 0) < n for name, n in fb.items())
+    if require_improvement and not improved:
+        moved = at > bt + tol or ah > bh + tol
+        why = " (the scores moved, but that is usually noise or a side effect)" if moved else ""
+        return False, f"no clear improvement: no test passes more often and no repeating failure got rarer " \
+                      f"(train {bt:.0%}->{at:.0%}, holdout {bh:.0%}->{ah:.0%}){why}"
     return True, f"train {bt:.0%}->{at:.0%}, holdout {bh:.0%}->{ah:.0%}"
 
 

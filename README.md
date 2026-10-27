@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 116 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 119 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -29,7 +29,9 @@ before you rely on it.
 3. A fixer reads the failures and your agent's `context.md`, and proposes **one small edit** to one harness file.
 4. Safety checks run before testing (see below).
 5. The edited harness is tested on the train cases and on **holdout** cases the fixer never saw.
-6. It is kept only if no score drops, at least one improves, and no always-passing case starts failing.
+6. It is kept only if no score drops, no always-passing case starts failing, and it clearly helps: a test
+   passes in more runs, or a failure that repeated across tests happens less (a higher average alone is not
+   enough).
 7. **You approve or reject** each change. It then looks for the next problem.
 8. Optional (`"cleanup": true`): at the end it can merge repeated instructions, tested the same way.
 
@@ -58,7 +60,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 116 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 119 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 

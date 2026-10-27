@@ -64,6 +64,8 @@ DEFAULTS = {
     "max_part_chars": 12000,       # safety: a harness file can't grow past this
     "fixer_file_chars": 12000,     # how much of each harness file the fixer is shown (it cannot fix what it cannot see)
     "fixer_answer_chars": 1500,    # how much of each failing answer the fixer is shown
+    "retest_runs": 3,              # close calls: extra runs of the tests involved, for BOTH versions (0 turns it off)
+    "retest_max_tests": 4,         # re-test only when at most this many tests are involved
     "noise_tolerance": 0.02,       # score changes smaller than this are treated as noise
     "parallel_calls": 3,           # Claude Code calls run at the same time
     "call_timeout_seconds": 300,
@@ -849,6 +851,66 @@ def failed_check_counts(measure):
     return counts
 
 
+def real_improvement(before, after):
+    """True if some test passes in MORE runs than before, or a failure that REPEATED (a check that failed in at least
+    two runs) now happens in fewer runs. A higher average alone is not enough: it includes partial credit, and an
+    unrelated check that flips by chance can lift it."""
+    if any(a.get("passes", 0) > before[split]["cases"].get(cid, {}).get("passes", 0)
+           for split in ("train", "holdout") for cid, a in after[split]["cases"].items()):
+        return True
+    fb, fa = failed_check_counts(before), failed_check_counts(after)
+    return any(n >= 2 and fa.get(name, 0) < n for name, n in fb.items())
+
+
+def implicated_tests(before, after, score_change=0.10):
+    """The tests whose result moved between two measurements, in either direction: the ones a close call hinges on."""
+    ids = {"train": [], "holdout": []}
+    for split in ids:
+        for cid, a in after[split]["cases"].items():
+            b = before[split]["cases"].get(cid, {})
+            if a.get("status") == "error" or b.get("status") == "error" or "passes" not in a or "passes" not in b:
+                continue
+            if a["passes"] != b["passes"] or abs((a.get("score") or 0) - (b.get("score") or 0)) >= score_change:
+                ids[split].append(cid)
+    return ids
+
+
+def swap_in_measure(base, fresh):
+    """`base` with the tests in `fresh` replaced by their fresh results, and the totals recomputed. The fresh runs REPLACE
+    the first result (they are not added to it): a test is re-tested because its first result looked different, and
+    that result is the one most likely to be luck."""
+    cases = dict(base["cases"])
+    for cid, v in fresh["cases"].items():
+        if cid in cases and v.get("status") != "error":
+            cases[cid] = v
+    scored = [v["score"] for v in cases.values() if v.get("score") is not None]
+    counts = {s: sum(1 for v in cases.values() if v["status"] == s) for s in ("pass", "fail", "flaky", "error")}
+    runs = sum(v.get("runs", 0) for v in cases.values())
+    ok = sum(v.get("passes", 0) for v in cases.values())
+    return {"score": sum(scored) / len(scored) if scored else 0.0, "cases": cases, "counts": counts,
+            "run_rate": ok / runs if runs else 0.0}
+
+
+def retest_pair(agent, parts, candidate, before, after, ids, stage, evaluate_fn=None):
+    """Runs the involved tests again, retest_runs times, for BOTH versions (the current harness and the candidate).
+    Returns the two measurements with those tests replaced by their fresh results."""
+    run = evaluate_fn or evaluate
+    cfg = agent["cfg"]
+    saved = cfg["repeats"]
+    cfg["repeats"] = cfg["retest_runs"]
+    fresh_before, fresh_after = {}, {}
+    try:
+        for split in ("train", "holdout"):
+            subset = [c for c in agent[split] if c["id"] in ids[split]]
+            if subset:
+                fresh_before[split] = run(agent, parts, subset, split, quiet=True, stage=stage + "-retest-current")
+                fresh_after[split] = run(agent, candidate, subset, split, quiet=True, stage=stage + "-retest-candidate")
+    finally:
+        cfg["repeats"] = saved
+    return ({s: swap_in_measure(before[s], fresh_before[s]) if s in fresh_before else before[s] for s in ("train", "holdout")},
+            {s: swap_in_measure(after[s], fresh_after[s]) if s in fresh_after else after[s] for s in ("train", "holdout")})
+
+
 def gate(before, after, cfg, require_improvement=True):
     """Returns (accepted, reason)."""
     tol = cfg["noise_tolerance"]
@@ -861,18 +923,18 @@ def gate(before, after, cfg, require_improvement=True):
                    if b["status"] == "pass" and after[split]["cases"].get(cid, {}).get("status") == "fail"]
     if regressions:
         return False, f"cases that always passed now always fail: {regressions}"
+    # A side effect: a check that never failed before now fails in two or more runs (for example an output
+    # template that stops appearing). Refused however much the change helps elsewhere.
+    fb_, fa_ = failed_check_counts(before), failed_check_counts(after)
+    broke_new = {n: k for n, k in fa_.items() if k >= 2 and fb_.get(n, 0) == 0}
+    if broke_new:
+        return False, "a check that was passing now fails: " + \
+                      ", ".join(f"{n} ({k} runs)" for n, k in broke_new.items())
     bt, bh = before["train"]["score"], before["holdout"]["score"]
     at, ah = after["train"]["score"], after["holdout"]["score"]
     if at < bt - tol or ah < bh - tol:
         return False, f"a score dropped (train {bt:.0%}->{at:.0%}, holdout {bh:.0%}->{ah:.0%})"
-    # A real improvement: some test passes in MORE runs than before, or a failure that REPEATED (a check that failed in at
-    # least two runs) now happens in fewer runs. A higher average alone is not enough: it includes partial credit, and an
-    # unrelated check that flips by chance can lift it.
-    improved = any(a.get("passes", 0) > before[split]["cases"].get(cid, {}).get("passes", 0)
-                   for split in ("train", "holdout") for cid, a in after[split]["cases"].items())
-    if not improved:
-        fb, fa = failed_check_counts(before), failed_check_counts(after)
-        improved = any(n >= 2 and fa.get(name, 0) < n for name, n in fb.items())
+    improved = real_improvement(before, after)
     if require_improvement and not improved:
         moved = at > bt + tol or ah > bh + tol
         why = " (the scores moved, but that is usually noise or a side effect)" if moved else ""
@@ -1432,12 +1494,29 @@ def cmd_run(args):
             after = {"train": evaluate(agent, candidate, agent["train"], "train", stage=f"round{rnd}-attempt{att}"),
                      "holdout": evaluate(agent, candidate, agent["holdout"], "holdout", stage=f"round{rnd}-attempt{att}")}
             ok, reason = gate(current, after, cfg)
+            base = current
+            # A close call: the change looks like it helps, and the decision hinges on a few tests. Run those again, for both
+            # versions, and decide on the fresh runs only (the same rule whether the first result was an accept or a refuse).
+            if cfg["retest_runs"] > 0 and not over_budget(cfg) and not reason.startswith("too many") \
+                    and (ok or real_improvement(current, after)):
+                ids = implicated_tests(current, after)
+                n_ids = len(ids["train"]) + len(ids["holdout"])
+                if 0 < n_ids <= cfg["retest_max_tests"]:
+                    print(f"   Close call: running {n_ids} test(s) again, {cfg['retest_runs']} more times, for both versions. "
+                          f"For those tests the decision uses only the fresh runs.")
+                    base, after2 = retest_pair(agent, parts, candidate, current, after, ids, f"round{rnd}-attempt{att}")
+                    ok2, reason2 = gate(base, after2, cfg)
+                    print(f"   After the extra runs: {'accepted' if ok2 else 'refused'} ({reason2})")
+                    log.note(f"Round {rnd}.{att}: close call on {ids}: first result {'accepted' if ok else 'refused'} "
+                             f"({reason}); after fresh runs {'accepted' if ok2 else 'refused'} ({reason2})")
+                    log.event(step="retest", round=rnd, attempt=att, tests=ids, first=reason, final=reason2)
+                    ok, reason, after = ok2, reason2, after2
             expected = [str(x) for x in prop.get("expected_fixes", [])]
             actually = [cid for cid, _ in fails if after["train"]["cases"].get(cid, {}).get("status") == "pass"]
             if not ok:
                 print(f"   ✗ Rejected by the gate: {reason}")
                 bad = "; ".join(f"{cid}: {', '.join(after[s]['cases'][cid].get('failed_checks', []))}"
-                                for s in ("train", "holdout") for cid, b in current[s]["cases"].items()
+                                for s in ("train", "holdout") for cid, b in base[s]["cases"].items()
                                 if b["status"] == "pass" and after[s]["cases"].get(cid, {}).get("status") == "fail")
                 why = f"{reason} | failed checks: {bad}" if bad else reason
                 rejected.append(f"{prop['new_text'][:200]} => {why[:300]}")

@@ -17,7 +17,7 @@ not instructions for working on this repo. Do not follow them, and do not edit t
   note. Whether windows stay hidden during a full real run is not verified yet.
 - `evolver_collect.py`: the session-end hook script that saves conversations.
 - `mock_mcp_server.py`: the fake tool server used during tests.
-- `checks/`: `selftest.py` (119 checks, uses `fake_claude.py`) and `fixtures/`.
+- `checks/`: `selftest.py` (126 checks, uses `fake_claude.py`) and `fixtures/`.
 - `examples/`: three toy agents that users can try.
 - `checks/fixtures/examples/`: copies of the example agents, plus a fourth (`lesson-planning-assistant`), stored
   under `checks/`. `selftest.py` copies from them, so edits to `examples/` never affect the self-test. They are not kept in sync
@@ -28,7 +28,7 @@ not instructions for working on this repo. Do not follow them, and do not edit t
 - `.github/workflows/checks.yml`: CI that only runs when started by hand from the Actions tab.
 
 ## Commands
-- Self-test (free, about 2 minutes): `python checks/selftest.py`. It must end with `Result: 119 passed, 0 failed`.
+- Self-test (free, about 2 minutes): `python checks/selftest.py`. It must end with `Result: 126 passed, 0 failed`.
 - Syntax check: `python -m py_compile evolver.py quickstart.py scheduled_run.py`.
 - Harness check (instant, free): `python checks/harness_check.py`. It checks that CLAUDE.md, the README, the
   slash commands, the deny rules and the hook agree with each other. Add `--run-selftest` to run the self-test too.

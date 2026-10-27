@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 119 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 126 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -32,6 +32,8 @@ before you rely on it.
 6. It is kept only if no score drops, no always-passing case starts failing, and it clearly helps: a test
    passes in more runs, or a failure that repeated across tests happens less (a higher average alone is not
    enough).
+   A check that was passing and now fails in two or more runs also blocks it. If the result is a close call,
+   the tests involved are run again for both versions, and for those tests the decision uses only the fresh runs.
 7. **You approve or reject** each change. It then looks for the next problem.
 8. Optional (`"cleanup": true`): at the end it can merge repeated instructions, tested the same way.
 
@@ -60,7 +62,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 119 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 126 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -319,6 +321,8 @@ use Git Bash or WSL.
 | `max_edit_chars` / `max_edit_lines` | `800` / `10` | Size limit of one edit |
 | `fixer_file_chars` | `12000` | How much of each harness file the fixer is shown. Raise it for long skill files |
 | `fixer_answer_chars` | `1500` | How much of each failing answer the fixer is shown |
+| `retest_runs` | `3` | Close calls: extra runs of the tests involved, for both versions (0 turns it off) |
+| `retest_max_tests` | `4` | Re-test only when at most this many tests are involved |
 | `strict_mcp` | `true` | No MCP servers during tests |
 | `tool_whitelist` | `true` | Agent may only use Read, Glob, Grep, Skill during tests |
 | `allow_subagents` | `false` | Let the agent use (and the tool edit) subagents |

@@ -493,5 +493,49 @@ _partial = {"train": _split({"a": (0, {}), "b": (0, {})}, 0.90),
 check("a repeating failure that gets rarer is accepted even if no test passes in full yet",
       ev.gate(_before, _partial, _cfg)[0])
 
+print("\n21. Close calls use fresh paired runs, and side effects are refused")
+def _meas(cases):
+    per = {}
+    for k, (p, r, b) in cases.items():
+        per[k] = {"status": "pass" if p == r else "fail" if p == 0 else "flaky", "passes": p, "runs": r,
+                  "score": p / r, "broke": dict(b), "failed_checks": list(b), "response": ""}
+    sc = [v["score"] for v in per.values()]
+    return {"score": sum(sc) / len(sc) if sc else 0.0, "cases": per, "run_rate": 0.0,
+            "counts": {s: sum(1 for v in per.values() if v["status"] == s) for s in ("pass", "fail", "flaky", "error")}}
+_cfg = {"noise_tolerance": 0.02}
+_b = {"train": _meas({"x1": (2, 2, {}), "x2": (2, 2, {}), "y": (0, 2, {"flaw": 2})}), "holdout": _meas({"h": (2, 2, {})})}
+_a = {"train": _meas({"x1": (1, 2, {"template": 1}), "x2": (1, 2, {"template": 1}), "y": (1, 2, {"flaw": 1})}),
+      "holdout": _meas({"h": (2, 2, {})})}
+_ok, _why = ev.gate(_b, _a, _cfg)
+check("a check that was passing and now fails in two runs is refused", not _ok and "was passing" in _why)
+_b2 = {"train": _meas({"y": (0, 2, {"flaw": 3})}), "holdout": _meas({"h": (2, 2, {})})}
+_a2 = {"train": _meas({"y": (0, 2, {"flaw": 5})}), "holdout": _meas({"h": (2, 2, {})})}
+check("a check that already failed is not treated as a new side effect", "was passing" not in ev.gate(_b2, _a2, _cfg)[1])
+_sw = ev.swap_in_measure(_meas({"a": (0, 1, {"flaw": 1}), "b": (1, 1, {})}), _meas({"a": (3, 3, {})}))
+check("fresh runs replace the first result for that test, and the totals follow",
+      _sw["cases"]["a"]["passes"] == 3 and _sw["cases"]["a"]["runs"] == 3 and _sw["cases"]["b"]["runs"] == 1
+      and _sw["counts"]["pass"] == 2 and abs(_sw["score"] - 1.0) < 1e-9)
+def _fake(persist):
+    def run(agent, parts, cases, label, quiet=False, stage=""):
+        cand = parts.get("f") == "candidate"
+        rows = {}
+        for c in cases:
+            if c["id"] == "a":                       # the candidate really fixes test a
+                rows["a"] = (3, 3, {}) if cand else (0, 3, {"flaw": 3})
+            else:                                    # test c: is the first-pass failure real?
+                rows[c["id"]] = (0, 3, {"template": 3}) if (cand and persist) else (3, 3, {})
+        return _meas(rows)
+    return run
+_agent = {"cfg": {"repeats": 1, "retest_runs": 3}, "train": [{"id": "a"}], "holdout": [{"id": "c"}]}
+_first_b = {"train": _meas({"a": (0, 1, {"flaw": 1})}), "holdout": _meas({"c": (1, 1, {})})}
+_first_a = {"train": _meas({"a": (1, 1, {})}), "holdout": _meas({"c": (0, 1, {"template": 1})})}
+check("the first result is refused because test c regressed", not ev.gate(_first_b, _first_a, _cfg)[0])
+_ids = ev.implicated_tests(_first_b, _first_a)
+_bb, _aa = ev.retest_pair(_agent, {"f": "current"}, {"f": "candidate"}, _first_b, _first_a, _ids, "t", evaluate_fn=_fake(False))
+check("a regression that was luck disappears on fresh paired runs, and the change is accepted", ev.gate(_bb, _aa, _cfg)[0])
+_bb, _aa = ev.retest_pair(_agent, {"f": "current"}, {"f": "candidate"}, _first_b, _first_a, _ids, "t", evaluate_fn=_fake(True))
+check("a regression that is real persists on fresh runs, and the change is still refused", not ev.gate(_bb, _aa, _cfg)[0])
+check("the repeats setting is restored after a re-test", _agent["cfg"]["repeats"] == 1)
+
 print(f"\nResult: {passed} passed, {failed} failed" + (f", {skipped} skipped" if skipped else ""))
 sys.exit(1 if failed else 0)

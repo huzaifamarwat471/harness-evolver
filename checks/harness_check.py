@@ -37,6 +37,11 @@ REQUIRED_DENY = [
     "Bash(*Remove-Item*)",
     "Bash(*git commit*)", "Bash(*git push*)", "Bash(*git clean*)", "Bash(*git checkout --*)",
     "Bash(*git reset --hard*)", "Bash(*rm -rf*)",
+    # Claude must not weaken its own guardrails, read its login file, or use more destructive commands.
+    "Edit(**/.claude/settings.json)", "Write(**/.claude/settings.json)",
+    "Edit(**/.claude/hooks/**)", "Write(**/.claude/hooks/**)",
+    "Read(~/.claude/.credentials.json)",
+    "Bash(rmdir*)", "Bash(*rmdir *)", "Bash(rd /s*)", "Bash(*git branch -D*)", "Bash(*git stash drop*)",
 ]
 
 # The commands that use the user's Claude plan. Settings must make Claude ask before each one.

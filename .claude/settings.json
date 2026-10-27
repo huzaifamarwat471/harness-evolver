@@ -32,7 +32,17 @@
       "Bash(*git clean*)",
       "Bash(*git checkout --*)",
       "Bash(*git reset --hard*)",
-      "Bash(*rm -rf*)"
+      "Bash(*rm -rf*)",
+      "Edit(**/.claude/settings.json)",
+      "Write(**/.claude/settings.json)",
+      "Edit(**/.claude/hooks/**)",
+      "Write(**/.claude/hooks/**)",
+      "Read(~/.claude/.credentials.json)",
+      "Bash(rmdir*)",
+      "Bash(*rmdir *)",
+      "Bash(rd /s*)",
+      "Bash(*git branch -D*)",
+      "Bash(*git stash drop*)"
     ],
     "ask": [
       "Bash(python evolver.py run*)",

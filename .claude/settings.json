@@ -22,7 +22,17 @@
       "Bash(git clean*)",
       "Bash(git checkout --*)",
       "Edit(**/checks/fixtures/**)",
-      "Write(**/checks/fixtures/**)"
+      "Write(**/checks/fixtures/**)",
+      "Bash(*Get-Content*.env*)",
+      "Bash(*cat *.env*)",
+      "Bash(*type *.env*)",
+      "Bash(*Remove-Item*)",
+      "Bash(*git commit*)",
+      "Bash(*git push*)",
+      "Bash(*git clean*)",
+      "Bash(*git checkout --*)",
+      "Bash(*git reset --hard*)",
+      "Bash(*rm -rf*)"
     ],
     "ask": [
       "Bash(python evolver.py run*)",

@@ -32,6 +32,11 @@ REQUIRED_DENY = [
     "Bash(cat *.env*)", "Bash(type *.env*)", "Bash(Get-Content *.env*)",
     "Bash(Remove-Item*)", "Bash(del *)", "Bash(git clean*)", "Bash(git checkout --*)",
     "Edit(**/checks/fixtures/**)", "Write(**/checks/fixtures/**)",
+    # The same words anywhere in a command, so wrapping it in powershell -Command does not get past them.
+    "Bash(*Get-Content*.env*)", "Bash(*cat *.env*)", "Bash(*type *.env*)",
+    "Bash(*Remove-Item*)",
+    "Bash(*git commit*)", "Bash(*git push*)", "Bash(*git clean*)", "Bash(*git checkout --*)",
+    "Bash(*git reset --hard*)", "Bash(*rm -rf*)",
 ]
 
 # The commands that use the user's Claude plan. Settings must make Claude ask before each one.

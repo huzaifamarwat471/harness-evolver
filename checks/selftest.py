@@ -537,5 +537,35 @@ _bb, _aa = ev.retest_pair(_agent, {"f": "current"}, {"f": "candidate"}, _first_b
 check("a regression that is real persists on fresh runs, and the change is still refused", not ev.gate(_bb, _aa, _cfg)[0])
 check("the repeats setting is restored after a re-test", _agent["cfg"]["repeats"] == 1)
 
+print("\n22. The dollar estimate before a run")
+_t = ev.cost_estimate_text(35, 51, (0.024, 3), 0, 2.5)
+check("with earlier runs the estimate uses them, says so, and states the cap",
+      "$0.84 to $1.22" in _t and "last 3 run(s)" in _t and "$2.50 cap" in _t)
+_t = ev.cost_estimate_text(35, 51, None, 0, 5.0)
+check("with no earlier run it says so and uses the range from our own runs", "no earlier run" in _t and "$0.35 to $2.04" in _t)
+_t = ev.cost_estimate_text(67, 147, (0.03, 2), 48, 2.5)
+check("the likely range never uses the worst case, and one re-test is priced on its own",
+      "$2.01 to $4.41" in _t and "$6" not in _t and "adds up to about 48 calls (about $1.44)" in _t)
+_tmp = Path(tempfile.mkdtemp()) / "agent"
+(_tmp / ".evolver").mkdir(parents=True)
+_con = ev.db_connect(_tmp / ".evolver")
+for _row in (("r1", "2026-01-01", "sonnet", 1.0, 50), ("r2", "2026-01-02", "sonnet", 0.5, 25), ("r3", "2026-01-03", "opus", 9.0, 10)):
+    _con.execute("INSERT INTO runs (run_id, started, agent, worker_model, repeats, cost_usd, calls) VALUES (?,?,?,?,?,?,?)",
+                 (_row[0], _row[1], "x", _row[2], 1, _row[3], _row[4]))
+_con.commit()
+_con.close()
+_pc = ev.past_cost_per_call({"dir": _tmp, "cfg": {"worker_model": "sonnet"}})
+check("the dollars per call come from earlier runs with the same worker model only",
+      _pc is not None and abs(_pc[0] - 0.02) < 1e-9 and _pc[1] == 2)
+_ag = {"cfg": {"retest_runs": 3, "retest_max_tests": 4},
+       "train": [{"checks": {"rubric": ["q"]}}] * 5, "holdout": [{"checks": {}}] * 3}
+check("what one re-test can use is worked out from the settings, and is zero when they are off",
+      ev.retest_extra_calls(_ag) == 4 * 3 * 2 * 2 and ev.retest_extra_calls(dict(_ag, cfg=dict(_ag["cfg"], retest_runs=0))) == 0)
+_lh = {"cfg": {"repeats": 1, "auto_apply": True, "auto_apply_min_repeats": 3, "attempts_per_round": 2},
+       "train": [{"checks": {}}] * 5, "holdout": [{"checks": {}}] * 3}
+check("the likely upper end counts a first round of attempts and the 3-run confirmation, and drops the confirmation when auto-apply is off",
+      ev.likely_high_calls(_lh) == 8 * 3 + 24 + 4 + 3
+      and ev.likely_high_calls(dict(_lh, cfg=dict(_lh["cfg"], auto_apply=False))) == 8 * 3 + 4 + 3)
+
 print(f"\nResult: {passed} passed, {failed} failed" + (f", {skipped} skipped" if skipped else ""))
 sys.exit(1 if failed else 0)

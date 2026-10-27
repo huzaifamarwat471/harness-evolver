@@ -1385,6 +1385,69 @@ def estimate_calls(agent):
     return low, high
 
 
+FALLBACK_USD_PER_CALL = (0.01, 0.04)   # what Claude Code calls cost in our own test runs: $0.008 to $0.039 each
+
+
+def past_cost_per_call(agent):
+    """(average dollars per call, number of runs) over this agent's last runs with the same worker model, or None."""
+    path = agent["dir"] / ".evolver" / "evals.db"
+    if not path.exists():
+        return None
+    try:
+        con = db_connect(agent["dir"] / ".evolver")
+        rows = con.execute("SELECT cost_usd, calls FROM runs WHERE worker_model=? AND calls > 0 AND cost_usd > 0 "
+                           "ORDER BY started DESC LIMIT 5", (agent["cfg"]["worker_model"],)).fetchall()
+        con.close()
+    except sqlite3.Error:
+        return None
+    calls = sum(r[1] for r in rows)
+    return (sum(r[0] for r in rows) / calls, len(rows)) if calls else None
+
+
+def retest_extra_calls(agent):
+    """The most calls ONE close-call re-test can use: the tests involved, run again for both versions."""
+    cfg = agent["cfg"]
+    if cfg["retest_runs"] <= 0:
+        return 0
+    cases = agent["train"] + agent["holdout"]
+    per = 2 if any(c["checks"].get("rubric") for c in cases) else 1     # all rubric questions share one judge call
+    return min(cfg["retest_max_tests"], len(cases)) * cfg["retest_runs"] * 2 * per
+
+
+def likely_high_calls(agent):
+    """The upper end of the LIKELY number of calls for one run: the baseline measurement, every attempt of a first round
+    (each is one more full measurement plus a fixer call and a safety call), and the 3-run confirmation that happens when
+    a fix is accepted and auto-apply is on. It does not count later rounds: the spending cap is the real limit."""
+    cfg = agent["cfg"]
+    per_case = lambda c: 1 + (1 if c["checks"].get("rubric") else 0)     # all rubric questions share one judge call
+    cases = agent["train"] + agent["holdout"]
+    one_eval = cfg["repeats"] * sum(per_case(c) for c in cases)
+    confirm = 0
+    if cfg["auto_apply"] and cfg["repeats"] < cfg["auto_apply_min_repeats"]:
+        confirm = cfg["auto_apply_min_repeats"] * sum(per_case(c) for c in cases)
+    apr = cfg["attempts_per_round"]
+    return one_eval * (1 + apr) + confirm + apr * 2 + 3
+
+
+def cost_estimate_text(low, high, per_call, retest_calls, cap):
+    """One line: the likely dollars, what it is based on, the cap (the most a run can spend), and what a re-test adds.
+    `high` is the likely upper end of the calls (see likely_high_calls)."""
+    if per_call:
+        usd, n = per_call
+        lo, hi, one_retest = low * usd, high * usd, retest_calls * usd
+        basis = f"this agent's last {n} run(s) averaged ${usd:.3f} per call"
+    else:
+        lo_rate, hi_rate = FALLBACK_USD_PER_CALL
+        lo, hi, one_retest = low * lo_rate, high * hi_rate, retest_calls * hi_rate
+        basis = (f"no earlier run of this agent to base it on, so this uses ${lo_rate:.2f} to ${hi_rate:.2f} per call, "
+                 f"the range seen in our own test runs")
+    text = (f"Estimated cost: likely about ${lo:.2f} to ${hi:.2f} ({basis}). "
+            f"The most it will spend is the ${float(cap):.2f} cap, which stops the run safely.")
+    if retest_calls:
+        text += f" A close-call re-test adds up to about {retest_calls} calls (about ${one_retest:.2f})."
+    return text
+
+
 def cmd_run(args):
     agent = load_agent(args.agent)
     cfg = agent["cfg"]
@@ -1426,6 +1489,8 @@ def cmd_run(args):
     low, high = estimate_calls(agent)
     print(f"\nEstimated Claude Code calls: {low} to {high}, {billing_note()}. "
           f"Spending cap for this run: ${float(cfg['max_run_cost_usd']):.2f} (max_run_cost_usd).")
+    print(cost_estimate_text(low, likely_high_calls(agent), past_cost_per_call(agent),
+                             retest_extra_calls(agent), cfg["max_run_cost_usd"]))
     if not args.yes and input("Continue? [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was changed.")
         return

@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 126 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 132 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -62,7 +62,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 126 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 132 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -212,6 +212,9 @@ as the real ones but return pretend data, and every call is recorded:
 
 ### Keeping runs cheap
 
+- Before every run the tool prints an estimated cost in dollars, based on this agent's earlier runs (or, when
+  there are none, the range seen in our own test runs). The spending cap is the most a run can spend, and one
+  close-call re-test is priced separately.
 - The judge, fixer and safety review run with a tiny system prompt (`--system-prompt`), so they don't carry Claude
   Code's large built-in prompt on every call. The agent under test keeps its real prompt.
 - All rubric questions for one answer are graded in **one** judge call.

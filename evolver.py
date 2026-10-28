@@ -2138,6 +2138,108 @@ def _label_summary(con, run_id):
 
 # ----------------------------------------------------------------------------- report
 
+def cmd_status(args):
+    """One free, read-only look at the whole loop for one agent. Changes nothing and calls no AI."""
+    if args.agent:
+        agent_dir = Path(args.agent).resolve()
+    else:
+        pointer = Path(".evolver-agent")
+        lines = pointer.read_text(encoding="utf-8-sig").splitlines() if pointer.exists() else []
+        first = lines[0].strip() if lines else ""
+        if not first:
+            raise EvolverError("No agent folder given. Type one, or put its path on the first line of a file "
+                               "named .evolver-agent in this folder.")
+        agent_dir = Path(first).resolve()
+        print(f"Using the folder from .evolver-agent: {agent_dir}")
+    evo = agent_dir / ".evolver"
+    if not evo.is_dir():
+        raise EvolverError(f"{agent_dir} has not been set up yet. Run /evolver-setup first.")
+    cfg = load_config(agent_dir, evo)
+    auto_on = bool(cfg["auto_apply"])
+    has_rules = (evo / "rules.json").exists()
+    rows = [("Agent", str(agent_dir)),
+            ("Auto-apply", "ON" if auto_on else "OFF (fixes are only proposed)"),
+            ("Spending cap per run", f"${float(cfg['max_run_cost_usd']):.2f}"),
+            ("rules.json (auto-apply needs it)", "present" if has_rules else "MISSING")]
+
+    context = (evo / "context.md").read_text(encoding="utf-8") if (evo / "context.md").exists() else ""
+    draft = context.lstrip().startswith("DRAFT")
+    n_tests = "none"
+    if (evo / "tests.json").exists():
+        try:
+            raw = json.loads((evo / "tests.json").read_text(encoding="utf-8-sig"))
+            if isinstance(raw, dict) and raw.get("draft"):
+                draft = True
+            n_tests = str(len(raw)) if isinstance(raw, list) else "draft"
+        except ValueError:
+            n_tests = "tests.json is not valid JSON"
+    unreviewed = (evo / "ACCEPTED_UNREVIEWED_DRAFTS.txt").exists()
+    rows.append(("Tests and context", f"{n_tests} test(s); " + ("STILL A DRAFT" if draft else "reviewed")
+                 + ("; accepted without review" if unreviewed else "")))
+
+    hook_on = False
+    local = agent_dir / ".claude" / "settings.local.json"
+    if local.exists():
+        try:
+            hooks = json.loads(local.read_text(encoding="utf-8-sig")).get("hooks", {}).get("SessionEnd", [])
+            hook_on = "evolver_collect.py" in json.dumps(hooks)
+        except (ValueError, AttributeError):
+            hook_on = False
+    inbox = evo / "inbox"
+    saved = len(list(inbox.glob("*.jsonl"))) if inbox.is_dir() else 0
+    rows.append(("Session-end hook", "installed" if hook_on else "not installed"))
+    rows.append(("Saved conversations", str(saved)))
+
+    task = schedule_names(agent_dir)
+    if os.name == "nt":
+        try:
+            q = subprocess.run(["schtasks", "/Query", "/TN", task], capture_output=True, text=True, timeout=20)
+            sched = f"exists ({task})" if q.returncode == 0 else "none"
+        except (OSError, subprocess.SubprocessError):
+            sched = "not checked"
+    else:
+        sched = "not checked (only Windows is checked)"
+    sched_on = sched.startswith("exists")
+    rows.append(("Daily schedule", sched))
+
+    runs_dir = evo / "runs"
+    newest = sorted(p.name for p in runs_dir.iterdir() if p.is_dir())[-1:] if runs_dir.is_dir() else []
+    last_run = newest[0] if newest else "none"
+    db = evo / "evals.db"
+    if newest and db.exists():
+        try:
+            con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            r = con.execute("SELECT start_train, start_holdout, end_train, end_holdout, cost_usd FROM runs "
+                            "WHERE run_id=?", (newest[0],)).fetchone()
+            con.close()
+            if r and r[2] is not None:
+                last_run += (f": train {r[0]:.0%} -> {r[2]:.0%}, holdout {r[1]:.0%} -> {r[3]:.0%}, "
+                             f"cost ${r[4]:.2f}")
+        except (sqlite3.Error, TypeError, ValueError):
+            pass
+    rows.append(("Last run", last_run))
+    notes_dir = evo / "notifications"
+    notes = sorted(p.name for p in notes_dir.iterdir() if p.is_file()) if notes_dir.is_dir() else []
+    rows.append(("Last applied change", notes[-1] if notes else "none"))
+
+    print("HARNESS EVOLVER STATUS")
+    width = max(len(k) for k, _ in rows)
+    for k, v in rows:
+        print(f"  {k:<{width}}  {v}")
+    print()
+    if sched_on and auto_on and has_rules:
+        print("Loop is ON: the daily run can apply verified fixes by itself.")
+    elif sched_on:
+        print("Loop is PROPOSE-ONLY: the daily run exists, but auto-apply is off or rules.json is missing, "
+              "so fixes wait for you.")
+    elif hook_on:
+        print("Loop is COLLECTING ONLY: conversations are being saved, but nothing runs every day.")
+    else:
+        print("Loop is OFF: no session-end hook and no daily schedule.")
+    if unreviewed or draft:
+        print("Warning: fixes are being judged against tests that were not reviewed.")
+
+
 def cmd_report(args):
     agent_dir = Path(args.agent).resolve()
     db = agent_dir / ".evolver" / "evals.db"
@@ -2284,11 +2386,13 @@ def main(argv=None):
     p_rep = sub.add_parser("report", help="show saved results: every run, and pass rates per test")
     p_rep.add_argument("agent")
     p_rep.add_argument("--run", help="which run to detail (default: the latest)")
+    p_stat = sub.add_parser("status", help="one free, read-only look at the loop: auto-apply, hook, schedule, last run")
+    p_stat.add_argument("agent", nargs="?", help="agent folder (default: the first line of the file .evolver-agent)")
     args = parser.parse_args(argv)
     try:
         {"init": cmd_init, "run": cmd_run, "apply": cmd_apply, "install-hook": cmd_install_hook,
          "mine": cmd_mine, "probe": cmd_probe, "export-evals": cmd_export_evals, "report": cmd_report,
-         "undo": cmd_undo, "schedule": cmd_schedule, "label": cmd_label}[args.command](args)
+         "undo": cmd_undo, "schedule": cmd_schedule, "label": cmd_label, "status": cmd_status}[args.command](args)
     except EvolverError as e:
         print(f"\nStopped: {e}")
         sys.exit(1)

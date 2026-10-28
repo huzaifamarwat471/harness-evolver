@@ -50,6 +50,9 @@ REQUIRED_ASK = [
     "Bash(python quickstart.py*)", "Bash(python scheduled_run.py install*)",
 ]
 
+# The only commands allowed without asking: free and read-only. Anything else belongs on the ask or deny list.
+ALLOWED_ONLY = ["Bash(python evolver.py status*)", "Bash(python evolver.py report*)"]
+
 NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
                 "nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
 
@@ -95,6 +98,10 @@ def main():
         ask = settings.get("permissions", {}).get("ask", [])
         gone_ask = [a for a in REQUIRED_ASK if a not in ask]
         check("every paid command is on the ask list", not gone_ask, "missing: " + "; ".join(gone_ask))
+        allow = settings.get("permissions", {}).get("allow", [])
+        extra_allow = [a for a in allow if a not in ALLOWED_ONLY]
+        check("the allow list holds only the free read-only commands", not extra_allow,
+              "not allowed here (use settings.local.json for personal rules): " + "; ".join(extra_allow))
     except ValueError as e:
         settings = {}
         check("settings.json is valid JSON", False, str(e))

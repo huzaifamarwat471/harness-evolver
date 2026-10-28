@@ -50,6 +50,10 @@
       "Bash(python evolver.py install-hook*)",
       "Bash(python quickstart.py*)",
       "Bash(python scheduled_run.py install*)"
+    ],
+    "allow": [
+      "Bash(python evolver.py status*)",
+      "Bash(python evolver.py report*)"
     ]
   },
   "hooks": {

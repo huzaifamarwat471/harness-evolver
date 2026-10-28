@@ -4,7 +4,7 @@ argument-hint: [agent folder]
 ---
 Show the Harness Evolver state of this agent: $ARGUMENTS
 
-The current folder must contain evolver.py; if it does not, stop and tell the user to start Claude Code in the Harness Evolver folder.
+Run only the one command below, by itself: no `ls`, no `cd`, no `&&`, nothing before or after it, because anything extra makes Claude Code ask for permission. If the command fails because evolver.py is not found, tell the user to start Claude Code in the Harness Evolver folder.
 
 If the arguments are empty, run exactly this (it reads the folder from the first line of the file .evolver-agent and says which folder it used):
 

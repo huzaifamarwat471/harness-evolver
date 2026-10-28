@@ -17,6 +17,9 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
    time, and, unless you turned on auto-apply, changes nothing until you run `apply`.
+4. **See where things stand (free):** `python evolver.py status "path/to/your agent copy"`, or `/evolver-status`
+   in Claude Code. It shows auto-apply, the tests, the hook, the schedule, the last run and the last fix.
+5. **Undo an auto-applied fix:** `python evolver.py undo "path/to/your agent copy"`.
 
 In Claude Code, open this folder and type `/evolver-help`. Please read "Known issues found in testing" below
 before you rely on it.
@@ -376,4 +379,13 @@ and the SUMMARY block from the end of the run. Do not paste private agent text.
   personal Claude limit; the run then stops safely and nothing is applied.
 - **If you trigger runs from a hook,** check the environment variable `EVOLVER_RUNNING`: it is `1` inside the tool's
   own test sessions. Skip your hook then, or each test session would start the tool again in a loop.
+- **Tested by one person, on Windows only.** Nobody else has run it yet. Mac and Linux are untested.
+- **Proven on a planted flaw, not yet on a real weakness.** On a real weakness it refused both fixes it tried, which
+  is the safe result, but it has not healed one yet.
+- **The always-on loop is built but not proven on real conversations** (the session-end hook, `mine`, and the daily
+  run). The self-test uses fake conversations.
+- **No defence yet against malicious text** inside conversations or tests that reach the fixer, and **no automatic
+  rollback** after an auto-apply (you run `undo` yourself).
+- **With no keyboard** (the Claude Code panel, a scheduled run) every question counts as no, so a change that passed
+  all the checks is saved as `proposed.patch` for you to apply later with `apply`.
 - Not handled yet: `CLAUDE.md` files in subfolders, extra files inside skill folders, learning from real conversation logs.

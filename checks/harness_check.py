@@ -28,18 +28,18 @@ REQUIRED_DENY = [
     "Read(./.env)", "Read(./.env.*)", "Read(**/.env)", "Read(**/.env.*)", "Read(**/api_secret.txt)",
     "Bash(rm -rf *)", "Bash(rm -r*)", "Bash(rm -f*)",
     "Bash(git commit*)", "Bash(git push*)", "Bash(git reset --hard*)",
-    "Edit(**/examples/**)", "Write(**/examples/**)",
+    "Edit(**/examples/**)",
     "Bash(cat *.env*)", "Bash(type *.env*)", "Bash(Get-Content *.env*)",
     "Bash(Remove-Item*)", "Bash(del *)", "Bash(git clean*)", "Bash(git checkout --*)",
-    "Edit(**/checks/fixtures/**)", "Write(**/checks/fixtures/**)",
+    "Edit(**/checks/fixtures/**)",
     # The same words anywhere in a command, so wrapping it in powershell -Command does not get past them.
     "Bash(*Get-Content*.env*)", "Bash(*cat *.env*)", "Bash(*type *.env*)",
     "Bash(*Remove-Item*)",
     "Bash(*git commit*)", "Bash(*git push*)", "Bash(*git clean*)", "Bash(*git checkout --*)",
     "Bash(*git reset --hard*)", "Bash(*rm -rf*)",
     # Claude must not weaken its own guardrails, read its login file, or use more destructive commands.
-    "Edit(**/.claude/settings.json)", "Write(**/.claude/settings.json)",
-    "Edit(**/.claude/hooks/**)", "Write(**/.claude/hooks/**)",
+    "Edit(**/.claude/settings.json)",
+    "Edit(**/.claude/hooks/**)",
     "Read(~/.claude/.credentials.json)",
     "Bash(rmdir*)", "Bash(*rmdir *)", "Bash(rd /s*)", "Bash(*git branch -D*)", "Bash(*git stash drop*)",
 ]

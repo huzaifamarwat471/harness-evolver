@@ -1128,6 +1128,21 @@ def unsafe(agent, old_parts, new_parts):
     return f"safety review: {reason or raw[:200] or 'empty reply'}", raw
 
 
+NO_KEYBOARD = {"hit": False, "proposal": None, "info": None}
+
+
+def ask(prompt):
+    """input() that does not crash when nobody is at the keyboard (panel, scheduled task, pipe).
+    No answer counts as NO, so nothing is ever approved, applied, installed or scheduled without a person saying yes."""
+    try:
+        return input(prompt)
+    except EOFError:
+        if not NO_KEYBOARD["hit"]:
+            print("\n(No keyboard to answer the question, so it counts as NO.)")
+        NO_KEYBOARD["hit"] = True
+        return ""
+
+
 def human_approves(title, info, diff):
     print("\n" + "-" * 70)
     print(title)
@@ -1136,7 +1151,7 @@ def human_approves(title, info, diff):
     print("\n  Change:")
     for line in diff.splitlines():
         print("    " + line)
-    return input("\nApply this change? [y/N]: ").strip().lower() in ("y", "yes")
+    return ask("\nApply this change? [y/N]: ").strip().lower() in ("y", "yes")
 
 
 # ----------------------------------------------------------------------------- consolidation
@@ -1491,7 +1506,7 @@ def cmd_run(args):
           f"Spending cap for this run: ${float(cfg['max_run_cost_usd']):.2f} (max_run_cost_usd).")
     print(cost_estimate_text(low, likely_high_calls(agent), past_cost_per_call(agent),
                              retest_extra_calls(agent), cfg["max_run_cost_usd"]))
-    if not args.yes and input("Continue? [y/N]: ").strip().lower() not in ("y", "yes"):
+    if not args.yes and ask("Continue? [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was changed.")
         return
     PREFLIGHT_AGENT.update(dir=agent["dir"], parts=agent["parts"])
@@ -1593,6 +1608,12 @@ def cmd_run(args):
                     "actually fixed": actually or "none of the targeted cases fully"}
             if not args.auto and not human_approves("PROPOSED CHANGE (passed all automatic checks)", info,
                                                     diff_text(parts, candidate)):
+                if NO_KEYBOARD["hit"]:
+                    NO_KEYBOARD["proposal"] = candidate
+                    NO_KEYBOARD["info"] = info
+                    print("   (Nobody to approve it.) The change passed all checks; it will be saved as a proposal only.")
+                    log.note(f"Round {rnd}.{att}: passed all checks, no one to approve; saved as proposal only")
+                    break
                 print("   ✗ You declined it. Trying a different idea.")
                 rejected.append(prop["new_text"][:200])
                 log.note(f"Round {rnd}.{att}: declined by reviewer")
@@ -1668,6 +1689,19 @@ def cmd_run(args):
     print(f"All results of this run are saved in {agent['dir'] / '.evolver' / 'evals.db'} (see: python evolver.py report)")
     print(f"Run folder: {run_dir}")
     if not patch:
+        prop = NO_KEYBOARD["proposal"]
+        if prop is not None:
+            for r, text in prop.items():
+                dst = final_dir / r
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_text(text, encoding="utf-8")
+            (run_dir / "proposed.patch").write_text(diff_text(original, prop) + "\n", encoding="utf-8")
+            print("A change passed all automatic checks, but nobody was there to approve it.")
+            print(f"  Scores with the change: {(NO_KEYBOARD['info'] or {}).get('scores', '')}")
+            print("It is saved as a proposal. Your agent was NOT changed. To use it, review proposed.patch, then run:")
+            print(f'  python evolver.py apply "{run_dir}"')
+            log.note("Stopped: passed all checks but no one was there to approve it; saved as proposal only")
+            return
         print("No changes were accepted. Your agent was not changed.")
         return
     if applied:
@@ -1793,7 +1827,7 @@ def cmd_apply(args):
     if any(live.get(r) != base.get(r) for r in changed):
         raise EvolverError("Some of these files were edited after this run started. Run the tool again on the current version.")
     print(diff_text(live, {r: (final_dir / r).read_text(encoding="utf-8") for r in changed}))
-    if input(f"\nWrite these changes into {agent_dir}? A backup is made first. [y/N]: ").strip().lower() not in ("y", "yes"):
+    if ask(f"\nWrite these changes into {agent_dir}? A backup is made first. [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was changed.")
         return
     backup = write_with_backup(agent_dir, {r: (final_dir / r).read_text(encoding="utf-8") for r in changed})
@@ -1819,7 +1853,7 @@ def cmd_install_hook(args):
     print("  When a session ends, copy the conversation into .evolver/inbox/ on this computer.")
     print("  It never calls an AI, never edits your harness, and skips the tool's own test sessions.")
     print(f"  Script: {hook_dst}")
-    if input("Install it? [y/N]: ").strip().lower() not in ("y", "yes"):
+    if ask("Install it? [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was changed.")
         return
     current = read_json(settings) if settings.exists() else {}
@@ -1925,7 +1959,7 @@ def cmd_mine(args):
     if not isinstance(tests, list):
         raise EvolverError("tests.json must be a plain list before new cases can be added.")
     print(f"{len(files)} new conversation(s). Personal details (emails, phone and ID numbers, keys) are hidden before sending.")
-    if not args.yes and input(f"Ask the fixer model to look for real problems? (about {len(files)} call(s)) [y/N]: ").strip().lower() not in ("y", "yes"):
+    if not args.yes and ask(f"Ask the fixer model to look for real problems? (about {len(files)} call(s)) [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was changed.")
         return
     preflight(cfg)
@@ -1965,7 +1999,7 @@ def cmd_mine(args):
             print(f"  User's complaint: {str(d.get('evidence', ''))[:200]}")
             print(f"  Test request:     {inp[:300]}")
             print(f"  Checks:           {json.dumps(case['checks'])}")
-            if input("  Add this test case to tests.json? [y/N]: ").strip().lower() in ("y", "yes"):
+            if ask("  Add this test case to tests.json? [y/N]: ").strip().lower() in ("y", "yes"):
                 tests.append(case)
                 added += 1
         done.add(f.name)
@@ -2051,7 +2085,7 @@ def cmd_label(args):
         lab = case["checks"].get("label")
         for k in todo:
             if k.startswith("label: ") and lab:
-                choice = input(f"\n  {k[7:]}\n  Labels: {' | '.join(lab['labels'])}\n  Your label: ").strip()
+                choice = ask(f"\n  {k[7:]}\n  Labels: {' | '.join(lab['labels'])}\n  Your label: ").strip()
                 if choice.lower() == "q":
                     return _label_summary(con, run_id)
                 human = next((l for l in lab["labels"] if l.lower() == choice.lower()), None)
@@ -2060,7 +2094,7 @@ def cmd_label(args):
                         print("  (not one of the labels, skipped)")
                     continue
             else:
-                choice = input(f"\n  {k[8:]}\n  Your answer [y/n]: ").strip().lower()
+                choice = ask(f"\n  {k[8:]}\n  Your answer [y/n]: ").strip().lower()
                 if choice == "q":
                     return _label_summary(con, run_id)
                 if choice not in ("y", "n"):
@@ -2187,7 +2221,7 @@ def cmd_schedule(args):
     print(f"  Log: {log}\n  Notes about applied changes: {agent_dir / '.evolver' / 'notifications'}")
     if os.environ.get("ANTHROPIC_API_KEY") or (os.name == "nt" and _user_env_has_key()):
         print("  WARNING: an ANTHROPIC_API_KEY is set, so scheduled runs may bill that API key.")
-    if input("Create this daily schedule? [y/N]: ").strip().lower() not in ("y", "yes"):
+    if ask("Create this daily schedule? [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was scheduled.")
         return
     if os.name == "nt":

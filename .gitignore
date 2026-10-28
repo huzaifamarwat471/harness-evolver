@@ -19,5 +19,8 @@ __pycache__/
 **/.evolver/evals.db
 **/.evolver/last_auto_apply.json
 
+# Which agent the slash commands use when you give no folder (personal)
+.evolver-agent
+
 # Personal Claude Code settings
 .claude/settings.local.json

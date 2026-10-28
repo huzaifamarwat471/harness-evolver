@@ -129,6 +129,7 @@ If you work in Claude Code, start it in this folder (`claude`). The commands in 
 | `/evolver-off <agent folder>` | Turns the continuous loop off | free |
 
 - Keep Claude Code in manual mode, so it asks before each command. Commands that spend plan usage or change files wait for an explicit "yes" in the chat.
+- To skip typing the folder, put one line in a file named `.evolver-agent` in this folder, for example `../my-agent`. `/evolver-status`, `/evolver-report` and `/evolver-undo` then use that folder when you give none, and say which one they used. The file is personal and git-ignored.
 - `/evolver-run` refuses when the agent has a `rules.json` and auto-apply is on, because that run could change the agent on its own.
 - Turning the continuous loop on (`quickstart.py --auto`) stays in a normal terminal. It asks for consent and installs a hook and a scheduled task.
 - Status: all nine commands have been tried in a real session, on throwaway agents. `/evolver-apply` should print `Applied.`; if it does not, nothing was written. `/evolver-undo` only reverses a change that auto-apply made.

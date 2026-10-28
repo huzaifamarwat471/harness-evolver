@@ -4,7 +4,7 @@ argument-hint: <agent folder>
 ---
 Show the saved results for this agent: $ARGUMENTS
 
-The current folder must contain evolver.py; if it does not, stop and tell the user to start Claude Code in the Harness Evolver folder. If the arguments are empty, ask for the agent folder and stop.
+The current folder must contain evolver.py; if it does not, stop and tell the user to start Claude Code in the Harness Evolver folder. If the arguments are empty, use the folder written on the first line of the file .evolver-agent in the current folder and tell the user which folder you are using; if that file is missing or empty, ask for the agent folder and stop.
 
 Run this, with the folder path from the arguments inside double quotes (a Windows path with backslashes is only read correctly inside double quotes; forward slashes also work):
 

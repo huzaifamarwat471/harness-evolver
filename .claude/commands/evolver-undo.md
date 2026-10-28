@@ -4,7 +4,7 @@ argument-hint: <agent folder>
 ---
 Reverse the last auto-applied change for this agent: $ARGUMENTS
 
-The current folder must contain evolver.py. If the arguments are empty, ask for the agent folder and stop.
+The current folder must contain evolver.py. If the arguments are empty, use the folder written on the first line of the file .evolver-agent in the current folder and tell the user which folder you are using; if that file is missing or empty, ask for the agent folder and stop.
 
 Tell the user what undo does, then ask them to reply "yes":
 - It restores the files changed by the last auto-apply from the backup.

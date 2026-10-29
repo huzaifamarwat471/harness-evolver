@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 132 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 136 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -65,7 +65,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 132 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 136 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -330,6 +330,7 @@ use Git Bash or WSL.
 | `fixer_answer_chars` | `1500` | How much of each failing answer the fixer is shown |
 | `retest_runs` | `3` | Close calls: extra runs of the tests involved, for both versions (0 turns it off) |
 | `retest_max_tests` | `4` | Re-test only when at most this many tests are involved |
+| `baseline_confirm_runs` | `3` | Failing train tests are re-run this many times before the fixer starts, so a lucky failure is not treated as a real one (0 turns it off) |
 | `strict_mcp` | `true` | No MCP servers during tests |
 | `tool_whitelist` | `true` | Agent may only use Read, Glob, Grep, Skill during tests |
 | `allow_subagents` | `false` | Let the agent use (and the tool edit) subagents |

@@ -66,6 +66,7 @@ DEFAULTS = {
     "fixer_answer_chars": 1500,    # how much of each failing answer the fixer is shown
     "retest_runs": 3,              # close calls: extra runs of the tests involved, for BOTH versions (0 turns it off)
     "retest_max_tests": 4,         # re-test only when at most this many tests are involved
+    "baseline_confirm_runs": 3,    # failing train tests are re-run this many times before the fixer starts (0 turns it off)
     "noise_tolerance": 0.02,       # score changes smaller than this are treated as noise
     "parallel_calls": 3,           # Claude Code calls run at the same time
     "call_timeout_seconds": 300,
@@ -1419,6 +1420,41 @@ def past_cost_per_call(agent):
     return (sum(r[0] for r in rows) / calls, len(rows)) if calls else None
 
 
+def confirm_baseline(agent, parts, current, evaluate_fn=None):
+    """Re-runs the failing train tests baseline_confirm_runs times, for the current harness, and replaces their first
+    result with the fresh runs. A test that failed once by luck becomes flaky or pass; a real failure stays 'fail'.
+    Returns (measurement, changes) where changes lists (test id, old status, new status)."""
+    cfg = agent["cfg"]
+    n = cfg.get("baseline_confirm_runs", 0)
+    if n <= 0 or n <= cfg["repeats"]:
+        return current, []
+    ids = [cid for cid, v in current["train"]["cases"].items() if v["status"] == "fail"][:cfg["retest_max_tests"]]
+    subset = [c for c in agent["train"] if c["id"] in ids]
+    if not subset:
+        return current, []
+    run = evaluate_fn or evaluate
+    saved = cfg["repeats"]
+    cfg["repeats"] = n
+    try:
+        fresh = run(agent, parts, subset, "train", quiet=True, stage="v0-confirm")
+    finally:
+        cfg["repeats"] = saved
+    new_train = swap_in_measure(current["train"], fresh)
+    changes = [(cid, "fail", new_train["cases"][cid]["status"]) for cid in ids
+               if new_train["cases"][cid]["status"] != "fail"]
+    return dict(current, train=new_train), changes
+
+
+def confirm_extra_calls(agent):
+    """The most calls the baseline confirmation can use: the failing train tests (at most retest_max_tests), run again."""
+    cfg = agent["cfg"]
+    n = cfg.get("baseline_confirm_runs", 0)
+    if n <= 0 or n <= cfg["repeats"]:
+        return 0
+    per = 2 if any(c["checks"].get("rubric") for c in agent["train"]) else 1
+    return min(cfg["retest_max_tests"], len(agent["train"])) * n * per
+
+
 def retest_extra_calls(agent):
     """The most calls ONE close-call re-test can use: the tests involved, run again for both versions."""
     cfg = agent["cfg"]
@@ -1506,6 +1542,8 @@ def cmd_run(args):
           f"Spending cap for this run: ${float(cfg['max_run_cost_usd']):.2f} (max_run_cost_usd).")
     print(cost_estimate_text(low, likely_high_calls(agent), past_cost_per_call(agent),
                              retest_extra_calls(agent), cfg["max_run_cost_usd"]))
+    if confirm_extra_calls(agent):
+        print(f"Re-checking failing tests before the fixer starts adds up to about {confirm_extra_calls(agent)} calls.")
     if not args.yes and ask("Continue? [y/N]: ").strip().lower() not in ("y", "yes"):
         print("Stopped. Nothing was changed.")
         return
@@ -1528,6 +1566,18 @@ def cmd_run(args):
     print("\nMeasuring the current harness")
     current = {"train": evaluate(agent, parts, agent["train"], "train", stage="v0"),
                "holdout": evaluate(agent, parts, agent["holdout"], "holdout", stage="v0")}
+    if over_budget(cfg):
+        print("\nSpending cap reached before the failing tests were re-checked.")
+    else:
+        current, moved = confirm_baseline(agent, parts, current)
+        if cfg.get("baseline_confirm_runs", 0) > cfg["repeats"]:
+            if moved:
+                print(f"Re-ran the failing tests {cfg['baseline_confirm_runs']} times: " + ", ".join(
+                    f"{cid} was only {new}" for cid, _, new in moved) + " (not a steady failure, so not sent to the fixer as one).")
+                log.note("Baseline confirmation: " + "; ".join(f"{cid}: fail -> {new}" for cid, _, new in moved))
+            else:
+                print(f"Re-ran the failing tests {cfg['baseline_confirm_runs']} times: the failures are steady.")
+            log.event(step="baseline_confirm", changed=[list(m) for m in moved])
     start = current
     log.note(f"Start: train {current['train']['score']:.0%}, holdout {current['holdout']['score']:.0%}")
     log.event(step="baseline", train=current["train"]["score"], holdout=current["holdout"]["score"])

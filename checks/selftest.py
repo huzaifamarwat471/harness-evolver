@@ -260,7 +260,7 @@ print("\n12. Auto-apply (only when every safety condition holds) and undo")
 def auto_agent(rules=True, repeats=3):
     a = fresh_copy("lesson-coach")
     cp = a / ".evolver" / "config.json"
-    c = _json.loads(cp.read_text()); c.update(auto_apply=True, repeats=repeats, max_rounds=1); cp.write_text(_json.dumps(c))
+    c = _json.loads(cp.read_text()); c.update(auto_apply=True, repeats=repeats, max_rounds=1, baseline_confirm_runs=0); cp.write_text(_json.dumps(c))
     if rules:
         (a / ".evolver" / "rules.json").write_text(_json.dumps({"checks": {"must_not_include": ["\u2014"]}}))
     return a
@@ -536,6 +536,24 @@ check("a regression that was luck disappears on fresh paired runs, and the chang
 _bb, _aa = ev.retest_pair(_agent, {"f": "current"}, {"f": "candidate"}, _first_b, _first_a, _ids, "t", evaluate_fn=_fake(True))
 check("a regression that is real persists on fresh runs, and the change is still refused", not ev.gate(_bb, _aa, _cfg)[0])
 check("the repeats setting is restored after a re-test", _agent["cfg"]["repeats"] == 1)
+
+print("\n21b. Failing tests are confirmed before the fixer starts")
+_cg = {"cfg": {"repeats": 1, "baseline_confirm_runs": 3, "retest_max_tests": 4}, "train": [{"id": "a", "checks": {}}, {"id": "b", "checks": {}}]}
+_cur = {"train": _meas({"a": (0, 1, {"x": 1}), "b": (0, 1, {"y": 1})}), "holdout": _meas({})}
+def _fk(agent, parts, cases, label, quiet=False, stage=""):
+    return _meas({c["id"]: ((2, 3, {}) if c["id"] == "a" else (0, 3, {"y": 3})) for c in cases})
+_new, _mv = ev.confirm_baseline(_cg, {}, _cur, evaluate_fn=_fk)
+check("a failure that was luck becomes flaky, a real one stays a failure",
+      _new["train"]["cases"]["a"]["status"] == "flaky" and _new["train"]["cases"]["b"]["status"] == "fail"
+      and _mv == [("a", "fail", "flaky")])
+check("the repeats setting is restored after the confirmation", _cg["cfg"]["repeats"] == 1)
+_cf = fresh_copy("lesson-coach")
+_cc = _json.loads((_cf / ".evolver" / "config.json").read_text()); _cc.update(max_rounds=1, max_run_cost_usd=5.0)
+(_cf / ".evolver" / "config.json").write_text(_json.dumps(_cc))
+check("a full run re-runs the failing tests before the fixer starts", "Re-ran the failing tests 3 times" in run_quietly(["run", str(_cf), "--yes", "--auto"]))
+check("setting it to 0 turns it off and uses no calls",
+      ev.confirm_baseline(dict(_cg, cfg=dict(_cg["cfg"], baseline_confirm_runs=0)), {}, _cur, evaluate_fn=_fk) == (_cur, [])
+      and ev.confirm_extra_calls(dict(_cg, cfg=dict(_cg["cfg"], baseline_confirm_runs=0))) == 0)
 
 print("\n22. The dollar estimate before a run")
 _t = ev.cost_estimate_text(35, 51, (0.024, 3), 0, 2.5)

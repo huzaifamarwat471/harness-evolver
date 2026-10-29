@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 136 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 141 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -65,7 +65,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 136 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 141 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -277,6 +277,11 @@ Every judge decision (yes/no answers and chosen labels) is saved in `.evolver/ev
 **Is the judge right?** `python evolver.py label "path/to/agent"` shows saved answers one by one; you give your own
 yes/no or label. It then says how often the judge agrees with you (and where it doesn't). `report` shows the same
 "JUDGE CHECK" number. Below about 80% agreement, the judge questions are probably unclear: rewrite them.
+
+**Is the judge steady?** `python evolver.py judge-check "path/to/agent"` takes a few answers the agent already gave
+and has the judge grade each one several times (`--answers 4 --times 5` by default; it asks before spending anything).
+If the judge flips on the same answer, the judge is the unsteady part, not the agent: reword that question as a single,
+concrete yes/no. It saves and changes nothing.
 
 ### Rules for every answer (`.evolver/rules.json`, optional)
 

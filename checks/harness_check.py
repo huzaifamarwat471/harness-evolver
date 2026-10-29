@@ -48,6 +48,7 @@ REQUIRED_DENY = [
 REQUIRED_ASK = [
     "Bash(python evolver.py run*)", "Bash(python evolver.py schedule*)", "Bash(python evolver.py install-hook*)",
     "Bash(python quickstart.py*)", "Bash(python scheduled_run.py install*)",
+    "Bash(python evolver.py judge-check*)",
 ]
 
 # The only commands allowed without asking: free and read-only. Anything else belongs on the ask or deny list.

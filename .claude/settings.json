@@ -45,7 +45,8 @@
       "Bash(python evolver.py schedule*)",
       "Bash(python evolver.py install-hook*)",
       "Bash(python quickstart.py*)",
-      "Bash(python scheduled_run.py install*)"
+      "Bash(python scheduled_run.py install*)",
+      "Bash(python evolver.py judge-check*)"
     ],
     "allow": [
       "Bash(python evolver.py status*)",

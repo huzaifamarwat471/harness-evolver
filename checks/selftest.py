@@ -555,6 +555,28 @@ check("setting it to 0 turns it off and uses no calls",
       ev.confirm_baseline(dict(_cg, cfg=dict(_cg["cfg"], baseline_confirm_runs=0)), {}, _cur, evaluate_fn=_fk) == (_cur, [])
       and ev.confirm_extra_calls(dict(_cg, cfg=dict(_cg["cfg"], baseline_confirm_runs=0))) == 0)
 
+print("\n21c. Is the judge steady? (judge-check)")
+_vs = {(0, "q1"): ["YES"] * 5, (0, "q2"): ["YES", "NO", "YES", "YES", "NO"], (1, "q1"): ["NO"] * 5, (1, "q3"): ["YES"]}
+check("steady and flipping verdicts are counted; a single verdict is not counted",
+      ev.judge_stability(_vs) == (2, 3, [(0, "q2")]))
+_jc = fresh_copy("lesson-coach")
+check("judge-check with no saved answers says so", "No saved answers yet" in run_quietly(["judge-check", str(_jc), "--yes"]))
+_cc = _json.loads((_jc / ".evolver" / "config.json").read_text()); _cc.update(max_rounds=1, max_run_cost_usd=5.0)
+(_jc / ".evolver" / "config.json").write_text(_json.dumps(_cc))
+run_quietly(["run", str(_jc), "--yes", "--auto"])
+_n0 = _sq.connect(str(_jc / ".evolver" / "evals.db")).execute("SELECT COUNT(*) FROM results").fetchone()[0]
+_jo = run_quietly(["judge-check", str(_jc), "--yes", "--times", "3", "--answers", "2"])
+check("judge-check grades saved answers again and reports how steady the judge is",
+      "same verdict every time on" in _jo and "(100%)" in _jo, _jo[-300:])
+_n1 = _sq.connect(str(_jc / ".evolver" / "evals.db")).execute("SELECT COUNT(*) FROM results").fetchone()[0]
+check("judge-check saves nothing, and without a yes it spends nothing",
+      _n0 == _n1 and "Stopped. Nothing was changed." in run_quietly(["judge-check", str(_jc)]))
+(_jc.parent / "fake_limit_after").write_text("0")
+_jl = run_quietly(["judge-check", str(_jc), "--yes", "--times", "2", "--answers", "2"])
+(_jc.parent / "fake_limit_after").unlink()
+check("if the judge cannot run (usage limit), it says so and prints no empty results",
+      "could not grade anything" in _jl and "Answer 1 (" not in _jl, _jl[-300:])
+
 print("\n22. The dollar estimate before a run")
 _t = ev.cost_estimate_text(35, 51, (0.024, 3), 0, 2.5)
 check("with earlier runs the estimate uses them, says so, and states the cap",

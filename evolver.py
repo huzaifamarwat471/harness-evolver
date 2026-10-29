@@ -2157,6 +2157,111 @@ def cmd_label(args):
     _label_summary(con, run_id)
 
 
+def judge_stability(verdicts):
+    """verdicts: {(answer, question): [YES or NO, ...]} from grading the same answer several times.
+    Returns (pairs with the same verdict every time, pairs counted, the pairs that flipped)."""
+    counted = [k for k, v in verdicts.items() if len(v) >= 2]
+    flipped = [k for k in counted if len(set(verdicts[k])) > 1]
+    return len(counted) - len(flipped), len(counted), flipped
+
+
+def cmd_judge_check(args):
+    """Is the judge steady? Grades the same saved answers again, several times, with the same questions, and says
+    how often it gives the same verdict. Reads the database read-only; saves and changes nothing."""
+    agent = load_agent(args.agent)
+    cfg = agent["cfg"]
+    dbfile = agent["dir"] / ".evolver" / "evals.db"
+    if not dbfile.exists():
+        raise EvolverError("No saved answers yet. Run: python evolver.py run <agent> first.")
+    cases = {c["id"]: c for c in agent["all_cases"] if c["checks"].get("rubric")}
+    if not cases:
+        raise EvolverError("None of the tests uses a judge question (rubric), so there is nothing to check.")
+    con = sqlite3.connect(f"file:{dbfile.as_posix()}?mode=ro", uri=True)
+    try:
+        rows = con.execute("SELECT case_id, response, passed FROM results WHERE response IS NOT NULL AND response != '' "
+                           "ORDER BY created DESC").fetchall()
+    finally:
+        con.close()
+    per = {}
+    for cid, text, passed in rows:
+        if cid in cases:
+            per.setdefault(cid, {}).setdefault(text, passed)          # newest first; one entry per distinct answer
+    if args.case and args.case not in cases:
+        raise EvolverError(f'No test "{args.case}" with judge questions. Tests that have them: {", ".join(cases)}')
+    if args.case and args.case not in per:
+        raise EvolverError(f'No saved answers for "{args.case}" yet.')
+    if not per:
+        raise EvolverError("No saved answers for a test with judge questions yet. Run: python evolver.py run <agent> first.")
+    cid = args.case or max(per, key=lambda k: len(per[k]))
+    good = [t for t, p in per[cid].items() if p == 1]
+    bad = [t for t, p in per[cid].items() if p != 1]
+    chosen = []
+    want = max(1, args.answers)
+    while len(chosen) < want and (good or bad):                 # a mix of passing and failing answers
+        for pool in (bad, good):
+            if pool and len(chosen) < want:
+                chosen.append(pool.pop(0))
+    times = max(2, args.times)
+    questions = cases[cid]["checks"]["rubric"]
+    calls = len(chosen) * times
+    print(f"Test {cid}: {len(questions)} judge question(s), {len(chosen)} saved answer(s), each graded {times} times "
+          f"by the judge ({cfg['judge_model']}).")
+    print(f"That is {calls} judge call(s), {billing_note()}.")
+    if len(chosen) < 2:
+        print("Only one saved answer for this test, so the result will say little. Run the tests a few more times first.")
+    if not args.yes and ask("Continue? [y/N]: ").strip().lower() not in ("y", "yes"):
+        print("Stopped. Nothing was changed.")
+        return
+    test_case = dict(cases[cid], checks={"rubric": questions})
+
+    def one(i):
+        _, results, err = score_response(test_case, chosen[i], cfg)
+        return i, judged_values(results), err
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, cfg["parallel_calls"])) as pool:
+        out = list(pool.map(one, [i for i in range(len(chosen)) for _ in range(times)]))
+    verdicts, errors, first_err = {}, 0, None
+    for i, judged, err in out:
+        if err:
+            errors += 1
+            first_err = first_err or err
+            continue
+        for q, v in judged.items():
+            verdicts.setdefault((i, q), []).append(v)
+    steady, total, flipped = judge_stability(verdicts)
+    print()
+    if errors == len(out):
+        print(f"The judge could not grade anything ({errors} call(s) failed): {str(first_err)[:200]}")
+        print(f"Cost of this check: ${COST['usd']:.2f} ({COST['calls']} calls)")
+        return
+    for i in range(len(chosen)):
+        state = "passed" if cid in per and per[cid].get(chosen[i]) == 1 else "failed a check"
+        print(f"Answer {i + 1} ({state} when it was first graded):")
+        for q in questions:
+            v = verdicts.get((i, f"rubric: {q}"), [])
+            if not v:
+                continue
+            yes = v.count("YES")
+            mark = "" if len(set(v)) == 1 else "   <- the judge changed its mind"
+            print(f"   YES {yes}/{len(v)}  {q[:90]}{mark}")
+    print()
+    if errors:
+        print(f"{errors} judge call(s) failed and are left out.")
+    if not total:
+        print("No verdicts to compare.")
+    else:
+        pct = steady / total
+        print(f"The judge gave the same verdict every time on {steady} of {total} (answer, question) pairs ({pct:.0%}).")
+        if pct >= 0.95:
+            print("The judge looks steady here. If test results still flip between runs, the agent's answers are what varies.")
+        elif pct >= 0.8:
+            print("Mostly steady. The questions marked above are the unsteady ones: make each a single, concrete yes/no.")
+        else:
+            print("The judge is the unsteady part. Reword the marked questions as single, concrete yes/no questions, "
+                  "or use a stronger judge_model for them, before trusting a fix that is decided by them.")
+        print(f"(A small sample: {len(chosen)} answer(s) x {times} runs.)")
+    print(f"Cost of this check: ${COST['usd']:.2f} ({COST['calls']} calls)")
+
+
 def judge_agreement(con, run_id=None, names=None):
     """(labels compared, agreements). With names, only labels on those judge questions count, so labels on
     questions you have since rewritten don't count against the new ones."""
@@ -2431,6 +2536,12 @@ def main(argv=None):
     p_lab.add_argument("agent")
     p_lab.add_argument("--run", help="which run (default: the latest)")
     p_lab.add_argument("--limit", type=int, default=10, help="how many answers to label this time")
+    p_jc = sub.add_parser("judge-check", help="grade saved answers again, several times, to see if the judge is steady")
+    p_jc.add_argument("agent")
+    p_jc.add_argument("--case", help="which test (default: the one with the most saved answers)")
+    p_jc.add_argument("--answers", type=int, default=4, help="how many saved answers to use")
+    p_jc.add_argument("--times", type=int, default=5, help="how many times to grade each answer")
+    p_jc.add_argument("--yes", action="store_true", help="do not ask before spending usage")
     p_undo = sub.add_parser("undo", help="restore the files changed by the last auto-apply")
     p_undo.add_argument("agent")
     p_rep = sub.add_parser("report", help="show saved results: every run, and pass rates per test")
@@ -2442,7 +2553,7 @@ def main(argv=None):
     try:
         {"init": cmd_init, "run": cmd_run, "apply": cmd_apply, "install-hook": cmd_install_hook,
          "mine": cmd_mine, "probe": cmd_probe, "export-evals": cmd_export_evals, "report": cmd_report,
-         "undo": cmd_undo, "schedule": cmd_schedule, "label": cmd_label, "status": cmd_status}[args.command](args)
+         "undo": cmd_undo, "schedule": cmd_schedule, "label": cmd_label, "status": cmd_status, "judge-check": cmd_judge_check}[args.command](args)
     except EvolverError as e:
         print(f"\nStopped: {e}")
         sys.exit(1)

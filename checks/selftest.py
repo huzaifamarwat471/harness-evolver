@@ -189,6 +189,27 @@ check("a made-up case was rejected", "made it up" in out)
 check("mined case keeps its source conversation for a fair split", after[-1]["source"] == "sess1")
 out = run_quietly(["mine", str(ag), "--yes"])
 check("already processed conversations are not mined again", "No new conversations" in out)
+
+print("\n9b. Mining hides swearing and slang")
+masked = ev.mask_strong_language("This is stupid bakwas, you fucking idiot")
+check("swearing and slang are masked", not any(w in masked.lower() for w in ("stupid", "bakwas", "fuck", "idiot")), masked)
+check("normal words are not masked", ev.mask_strong_language("A class assistant, please shorten it") == "A class assistant, please shorten it")
+check("your own words are masked too", "[strong language]" in ev.mask_strong_language("so annoying zzzword", ["zzzword"]))
+check("masking reaches inside checks", ev.mask_deep({"must_not_include": ["stupid"], "rubric": ["no bakwas"]})
+      == {"must_not_include": ["[strong language]"], "rubric": ["no [strong language]"]})
+ag2 = fresh_copy("lesson-coach")
+(ag2 / ".evolver" / "inbox").mkdir(exist_ok=True)
+(ag2 / ".evolver" / "mask_words.txt").write_text("# my words\nzzzword\n", encoding="utf-8")
+check("mask_words.txt is read, comments skipped", ev.load_mask_words(ag2 / ".evolver") == ["zzzword"])
+(ag2 / ".evolver" / "inbox" / "sess2.jsonl").write_text("\n".join(_json.dumps(x) for x in [
+    {"type": "user", "message": {"role": "user", "content": "Grade 3 Science, magnets. Give feedback, you stupid bakwas bot."}},
+    {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Here is detailed feedback " * 40}]}},
+    {"type": "user", "message": {"role": "user", "content": "Too long, I read on my phone."}},
+]), encoding="utf-8")
+out = run_quietly(["mine", str(ag2), "--yes"], answers=["y", "y"])
+mined = _json.loads((ag2 / ".evolver" / "tests.json").read_text())[-1]
+check("a mined test input has no swearing or slang", not any(w in mined["input"].lower() for w in ("stupid", "bakwas")), mined["input"])
+check("the mined test keeps the request and marks what was hidden", "magnets" in mined["input"] and "[strong language]" in mined["input"], mined["input"])
 out = run_quietly(["install-hook", str(ag)], answers=["y"])
 settings = _json.loads((ag / ".claude" / "settings.local.json").read_text())
 check("install-hook adds one SessionEnd hook in settings.local.json", "evolver_collect.py" in _json.dumps(settings["hooks"]["SessionEnd"]))
@@ -606,6 +627,154 @@ _lh = {"cfg": {"repeats": 1, "auto_apply": True, "auto_apply_min_repeats": 3, "a
 check("the likely upper end counts a first round of attempts and the 3-run confirmation, and drops the confirmation when auto-apply is off",
       ev.likely_high_calls(_lh) == 8 * 3 + 24 + 4 + 3
       and ev.likely_high_calls(dict(_lh, cfg=dict(_lh["cfg"], auto_apply=False))) == 8 * 3 + 4 + 3)
+
+print("\n23. Held-back proof, one idea per edit, real numbers")
+_cfg = {"noise_tolerance": 0.02}
+_b = {"train": _meas({"a": (0, 3, {"flaw": 3})}), "holdout": _meas({"h": (2, 3, {"flaw": 1})})}
+_same = {"train": _meas({"a": (3, 3, {})}), "holdout": _meas({"h": (2, 3, {"flaw": 1})})}
+_up = {"train": _meas({"a": (3, 3, {})}), "holdout": _meas({"h": (3, 3, {})})}
+_ok, _why = ev.gate(_b, _same, _cfg)
+check("a fix whose held-back tests did not improve is accepted only with a NOT PROVEN warning", _ok and "NOT PROVEN" in _why, _why)
+_ok, _why = ev.gate(_b, _same, dict(_cfg, require_holdout_gain=True))
+check("with require_holdout_gain the same fix is refused as not proven", not _ok and "not proven" in _why, _why)
+_ok, _why = ev.gate(_b, _up, dict(_cfg, require_holdout_gain=True))
+check("a fix that improves the held-back tests is accepted, with no warning", _ok and "NOT PROVEN" not in _why, _why)
+_nums = ev.decision_numbers(_b, _up)
+check("the numbers a decision used are printed: runs passed on each split and which tests moved",
+      "train runs passed 0/3 (0%) -> 3/3 (100%)" in _nums and "holdout runs passed 2/3 (67%) -> 3/3 (100%)" in _nums and "a +3" in _nums, _nums)
+_la = {"cfg": dict(ev.DEFAULTS), "global_checks": {"must_not_include": ["x"]}, "all_cases": [], "dir": Path(tempfile.mkdtemp())}
+_start = {"train": _meas({"a": (0, 3, {"flaw": 3})}), "holdout": _meas({"h": (1, 3, {"flaw": 2})})}
+def _final(hold_pass):
+    m = {"train": _meas({"a": (3, 3, {})}), "holdout": _meas({"h": (hold_pass, 3, {})}), "confirmed_repeats": 3}
+    m["holdout"]["run_rate"] = 1.0
+    return m
+check("auto-apply is blocked when the held-back tests did not pass more often than at the start",
+      any("not proven" in b for b in ev.auto_apply_blockers(_la, {}, {}, _final(1), _start)))
+check("auto-apply is not blocked for that reason when they did", not any("not proven" in b for b in ev.auto_apply_blockers(_la, {}, {}, _final(3), _start)))
+check("that block can be switched off in config.json", not any("not proven" in b for b in ev.auto_apply_blockers(
+    dict(_la, cfg=dict(ev.DEFAULTS, auto_apply_require_holdout_gain=False)), {}, {}, _final(1), _start)))
+_ea = ev.load_agent(fresh_copy("lesson-coach"))
+_sk = ".claude/skills/lesson-feedback/SKILL.md"
+def _try(**kw):
+    prop = {"file": _sk, "action": "add", "old_text": "", "new_text": "Keep every answer under 120 words."}
+    prop.update(kw)
+    return ev.apply_edit(_ea, _ea["parts"], prop)[1]
+check("one short rule is allowed", _try() is None, _try())
+check("an edit that bundles four instructions is refused", "ONE idea" in (_try(new_text=
+      "Keep answers short. Always start with praise. Name one strength first. End with a question for the teacher.") or ""))
+check("a new heading is refused", "heading" in (_try(new_text="## Extra rules\nKeep answers under 120 words.") or ""))
+check("a replace is judged by what it ADDS, not by the text it keeps", _try(action="replace",
+      old_text="When a teacher shares a lesson plan, give feedback on it.",
+      new_text="When a teacher shares a lesson plan, give feedback on it. Keep it under 120 words.") is None)
+_t = ev.cost_recheck_text(1.20, 40, 100, 2.0)
+check("after the first measurement the real price per call is shown, with the projected total",
+      "$0.030 per call" in _t and "about $3.00" in _t and "probably stop the run early" in _t, _t)
+check("no price, no recheck line", ev.cost_recheck_text(0, 0, 100, 2.0) is None)
+_rl = fresh_copy("lesson-coach")
+_rc = _json.loads((_rl / ".evolver" / "config.json").read_text()); _rc["max_run_cost_usd"] = 5.0
+(_rl / ".evolver" / "config.json").write_text(_json.dumps(_rc), encoding="utf-8")
+out = run_quietly(["run", str(_rl), "--yes", "--auto"])
+check("a run prints the numbers behind each decision and the real price after the first measurement",
+      "Numbers: train runs passed" in out and "Real price so far:" in out, out[-500:])
+check("the summary shows the held-back runs passed", "Held-back tests, runs passed:" in out, out[-600:])
+
+print("\n24. Mining: real context, no invented limits, live tools flagged")
+check("a word limit is kept only if the user named that number",
+      ev.number_in_text(15, "keep it under 15 words") and ev.number_in_text(50, "under fifty words") and not ev.number_in_text(60, "keep it short"))
+_c, _n = ev.clean_mined_checks({"max_words": 60, "must_include": ["zzz made up"], "must_not_include": ["no", "detailed feedback"],
+                                "rubric": ["Is it short and polite?", "Is it polite?"], "label": {}},
+                               "keep it short", "Here is detailed feedback")
+check("invented limits and phrases, too-short phrases, compound questions and unsupported checks are removed",
+      _c == {"must_not_include": ["detailed feedback"], "rubric": ["Is it polite?"]} and len(_n) == 5, f"{_c} {_n}")
+ag3 = fresh_copy("lesson-coach")
+(ag3 / ".evolver" / "inbox").mkdir(exist_ok=True)
+(ag3 / ".evolver" / "inbox" / "ctx1.jsonl").write_text("\n".join(_json.dumps(x) for x in [
+    {"type": "user", "message": {"role": "user", "content": "Write the weekly update for Danish about the magnets unit. Keep it under 15 words. [CTX-TEST]"}},
+    {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Here is a long weekly update " * 20}]}},
+    {"type": "user", "message": {"role": "user", "content": "shorter"}},
+]), encoding="utf-8")
+out = run_quietly(["mine", str(ag3), "--yes"], answers=["y", "y"])
+mined = _json.loads((ag3 / ".evolver" / "tests.json").read_text())[-1]
+check("a follow-up complaint keeps the earlier messages as context (the request is taken by number)",
+      isinstance(mined["input"], list) and [m["role"] for m in mined["input"]] == ["user", "assistant", "user"], str(mined)[:300])
+check("only checks that match the conversation are kept", mined["checks"] == {"max_words": 15, "rubric": ["Is the tone polite?"]}, str(mined["checks"]))
+check("a request that is only a short follow-up, with no context, is skipped and says why", "only a short follow-up" in out, out[-500:])
+check("what was removed is shown to the reviewer", "never named that number" not in out or "(note:" in out)
+ag4 = fresh_copy("lesson-coach")
+(ag4 / ".evolver" / "inbox").mkdir(exist_ok=True)
+(ag4 / ".evolver" / "inbox" / "tool1.jsonl").write_text("\n".join(_json.dumps(x) for x in [
+    {"type": "user", "message": {"role": "user", "content": "Grade 3 Science, magnets. Give feedback on my plan please."}},
+    {"type": "assistant", "message": {"role": "assistant", "content": [
+        {"type": "tool_use", "name": "mcp__crm__lookup", "input": {}}, {"type": "text", "text": "Here is detailed feedback " * 40}]}},
+    {"type": "user", "message": {"role": "user", "content": "Too long, I read on my phone."}},
+]), encoding="utf-8")
+out = run_quietly(["mine", str(ag4), "--yes"], answers=["y", "y"])
+_mt = _json.loads((ag4 / ".evolver" / "tests.json").read_text())[-1]
+check("a conversation that used live tools gives a test marked needs_tools, which runs skip", _mt.get("needs_tools") is True
+      and "needs live tools" in out and _mt["id"] in [c["id"] for c in ev.load_agent(ag4)["skipped"]], out[-400:])
+_ids = [c["id"] for c in _json.loads((ag4 / ".evolver" / "tests.json").read_text())][:1]
+out = run_quietly(["mark-tools", str(ag4)] + _ids)
+check("mark-tools marks a test as needing live tools, with a backup", "marked as needing live tools" in out and
+      _json.loads((ag4 / ".evolver" / "tests.json").read_text())[0].get("needs_tools") is True, out)
+out = run_quietly(["mark-tools", str(ag4), "--unmark"] + _ids)
+check("--unmark puts it back", "put back" in out and "needs_tools" not in _json.loads((ag4 / ".evolver" / "tests.json").read_text())[0], out)
+check("an unknown test id is refused", "No test with the id" in run_quietly(["mark-tools", str(ag4), "nope"]))
+
+_w = [{"role": "user", "content": "Write the weekly update for Danish about the unit."}, {"role": "assistant", "content": "x" * 50},
+      {"role": "user", "content": "shorter"}]
+check("message numbers written as text are understood, and a number that is not a user message is refused",
+      ev.case_request(_w, {"request": "0"}, [])[0] == _w[0]["content"] and "not a message from the user" in ev.case_request(_w, {"request": 1}, [])[1])
+
+print("\n25. Your own agent: detect, configure, fake tools in your runner")
+own = Path(tempfile.mkdtemp()) / "my-agent"
+(own / "prompts").mkdir(parents=True)
+(own / "SOUL.md").write_text("You are a polite helper for a school office.\n", encoding="utf-8")
+(own / "prompts" / "format.md").write_text("- Keep answers short.\n", encoding="utf-8")
+(own / "README.md").write_text("docs\n", encoding="utf-8")
+(own / "run_agent.py").write_text(
+    "import json, os, sys\n"
+    "msg = sys.stdin.read()\n"
+    "tools = os.environ.get('EVOLVER_MOCK_TOOLS')\n"
+    "out = 'No tools.'\n"
+    "if tools and os.path.exists(tools):\n"
+    "    t = json.load(open(tools))['tools'][0]\n"
+    "    open(os.environ['EVOLVER_CALL_LOG'], 'a').write(json.dumps({'tool': t['name']}) + '\\n')\n"
+    "    out = 'Account is ' + str(t['returns'])\n"
+    "print(json.dumps({'result': out}))\n", encoding="utf-8")
+os.environ["EVOLVER_FAKE_STATE"] = str(own.parent)
+out = run_quietly(["detect", str(own)])
+check("detect says it is your own agent and lists the instruction files and the entry script",
+      "YOUR OWN agent" in out and "SOUL.md" in out and "prompts/*.md" in out and "run_agent.py" in out and "configure" in out, out)
+out = run_quietly(["detect", str(fresh_copy("lesson-coach"))])
+check("detect recognises a Claude Code agent", "Claude Code agent" in out, out)
+check("configure refuses instruction files that do not exist", "None of those instruction files exist" in
+      run_quietly(["configure", str(own), "--harness-files", "NOPE.md"]))
+check("configure refuses a runner script that is not in the folder", "is not in the agent folder" in
+      run_quietly(["configure", str(own), "--runner", "{python} missing.py"]))
+out = run_quietly(["configure", str(own), "--harness-files", "SOUL.md", "prompts/*.md", "--runner", "{python} run_agent.py --json",
+                   "--notes", "Answers must stay in the office's own voice."])
+_c = _json.loads((own / ".evolver" / "config.json").read_text())
+check("configure saves the files, the runner and the notes", _c["harness_files"] == ["SOUL.md", "prompts/*.md"]
+      and _c["runner"]["command"] == ["{python}", "run_agent.py", "--json"] and (own / ".evolver" / "owner_notes.md").exists(), out)
+out = run_quietly(["init", str(own)])
+check("init then drafts context and starter tests from YOUR files, even though config.json already exists",
+      (own / ".evolver" / "context.md").exists() and (own / ".evolver" / "tests.json").exists() and "SOUL.md" in out, out)
+tools_agent = Path(tempfile.mkdtemp()) / "tools-agent"
+shutil.copytree(own, tools_agent)
+shutil.rmtree(tools_agent / ".evolver")
+(tools_agent / ".evolver").mkdir()
+(tools_agent / ".evolver" / "config.json").write_text(_json.dumps({"harness_files": ["SOUL.md"], "runner": {"command": ["{python}", "run_agent.py"]},
+                                                                  "repeats": 1}), encoding="utf-8")
+(tools_agent / ".evolver" / "context.md").write_text("# Agent: office helper\n\n## Protected rules\n- Be kind\n", encoding="utf-8")
+(tools_agent / ".evolver" / "mock_tools.json").write_text(_json.dumps(
+    {"server": "crm", "tools": [{"name": "lookup", "returns": "ACCOUNT-42"}], "allowed": ["lookup"]}), encoding="utf-8")
+(tools_agent / ".evolver" / "tests.json").write_text(_json.dumps([
+    {"id": "a1", "input": "What is my account?", "split": "train", "source": "s1",
+     "checks": {"must_call_tool": ["lookup"], "must_include": ["ACCOUNT-42"]}},
+    {"id": "h1", "input": "Which account is mine?", "split": "holdout", "source": "s2", "checks": {"must_include": ["ACCOUNT-42"]}}]), encoding="utf-8")
+out = run_quietly(["probe", str(tools_agent), "a1"])
+check("a custom runner can use fake tools: it is handed their results, and the calls it logs are checked",
+      "PROBE PASS a1" in out, out)
 
 print(f"\nResult: {passed} passed, {failed} failed" + (f", {skipped} skipped" if skipped else ""))
 sys.exit(1 if failed else 0)

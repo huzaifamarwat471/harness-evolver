@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 141 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 181 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -65,7 +65,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 141 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 181 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -168,6 +168,22 @@ Tell the tool both in `.evolver/config.json`:
   writing to databases); the tool cannot block that for you.
 - See `checks/fixtures/examples/lesson-planning-assistant` for a working example.
 
+**Easier: let the tool look first.** `python evolver.py detect "path/to/your-agent"` says whether the folder is a Claude Code
+agent or your own, lists the likely instruction files and entry scripts, and prints the `configure` command to run:
+```
+python evolver.py configure "path/to/your-agent" --harness-files "SOUL.md" "prompts/*.md" --runner "{python} run_agent.py --json" --notes "anything the tool should know"
+python evolver.py init "path/to/your-agent"
+```
+`configure` checks that the files and the runner script exist and writes `config.json`; `--notes` are read once when the
+starter context and tests are drafted. `init` then drafts them from YOUR files. In Claude Code, `/evolver-setup` asks which
+kind of agent you have and does these steps. Use paths relative to the agent folder, with forward slashes.
+
+**Fake tools with your own runner.** If a `mock_tools.json` exists, the tool cannot put fake tools inside your code, so it
+hands them over: your runner receives `EVOLVER_MOCK_TOOLS` (a file with the fake tool results for this test),
+`EVOLVER_CALL_LOG` (append one JSON line `{"tool": "name"}` per fake tool your runner calls, so `must_call_tool` checks work),
+`EVOLVER_CASE_ID` and `EVOLVER_TEST_MODE=1`. Your runner decides to use them; without that, tests that need real tools
+should be marked `needs_tools` (see mining below).
+
 ### Continual mode: learn from real conversations (optional)
 
 Instead of only using test cases you write, the tool can learn from how people really use your agent:
@@ -178,8 +194,15 @@ Instead of only using test cases you write, the tool can learn from how people r
    It never calls an AI, never edits your harness, and does nothing inside the tool's own test sessions.
 2. **Mine:** `python evolver.py mine "path/to/your-agent"`
    Looks for moments where a user corrected the agent ("too long", "that's wrong") and drafts test cases from them.
-   Emails, phone and ID numbers, and keys are hidden before sending. Cases whose request is not really in the
-   conversation are dropped. **You approve each case** before it is added to `tests.json`.
+   Emails, phone and ID numbers, and keys are hidden before sending, and so are swearing and slang (shown as
+   `[strong language]`; add your own words, one per line, to `.evolver/mask_words.txt`). The model names the numbers of the
+   messages, so the request is taken from the real conversation and cannot be invented; for a follow-up like "shorter" the
+   earlier messages (up to 5) are kept as context. Mined checks are cleaned: a word limit the user never named, a phrase
+   nobody wrote, a very short phrase and a question that checks two things at once are removed (and the review shows what was
+   removed). A conversation where the agent used tools the test copy does not have (anything except Read, Glob, Grep, Skill)
+   becomes a test marked `needs_tools`: it is saved but skipped in runs, so it cannot add noise. Mark or unmark older tests with
+   `python evolver.py mark-tools "path/to/your-agent" <test ids>` (`--unmark` puts them back).
+   **You approve each case** before it is added to `tests.json`.
 3. **Run:** `python evolver.py run "path/to/your-agent" --auto --yes` (for example once a day), then review
    `proposed.patch` and `apply` when you agree.
 
@@ -211,7 +234,7 @@ as the real ones but return pretend data, and every call is recorded:
   (a blocked attempt also counts as "called").
 - Real MCP servers are not loaded during tests; only the fake server runs. Some Claude Code versions ignore the switch that turns real tools off (`--strict-mcp-config`): check your version before the first run on an agent with live tools.
 - Fake tools return pretend data: logins, real error responses and wrong arguments are not tested.
-- Fake tools only work with Claude Code agents, not with a custom runner command.
+- With a custom runner, fake tools are handed to your runner in environment variables (see above); the tool cannot enforce them inside your code.
 - Writing `mock_tools.json` by hand is the main setup work. `quickstart.py --tools a,b --server NAME` drafts it: check the allowed / not allowed split and fill in the TODOs.
 
 ### Keeping runs cheap
@@ -236,6 +259,8 @@ A verified fix is written into the agent automatically, but **only if every safe
 - `.evolver/rules.json` exists, so every answer was checked against all hard rules
 - the final version was confirmed with at least 3 runs per test (done automatically, even if you explore with 1)
 - at least 85% of holdout runs passed (`auto_apply_min_holdout`)
+- the held-back tests passed more often than at the start (`auto_apply_require_holdout_gain`, on by default): a fix that
+  only helped the tests it was shaped on is not applied automatically
 - no test call failed with an error, and the total change is small
 - nobody edited the agent's files while the run was going
 - if tests use a judge and you have labelled at least 5 of its decisions (`python evolver.py label`), the judge
@@ -341,6 +366,9 @@ use Git Bash or WSL.
 | `allow_subagents` | `false` | Let the agent use (and the tool edit) subagents |
 | `locked_parts` | `[]` | Extra files to lock, e.g. `[".claude/skills/billing/SKILL.md"]` |
 | `max_run_cost_usd` | `1.0` | Spending cap for one run |
+| `max_edit_sentences` | `3` | One edit is one idea: at most this many NEW sentences or list items (a new heading is refused too) |
+| `require_holdout_gain` | `false` | `true` refuses a fix whose held-back tests did not pass more often. By default it is accepted with a NOT PROVEN warning |
+| `auto_apply_require_holdout_gain` | `true` | Auto-apply needs the held-back tests to pass more often than at the start |
 | `cleanup` | `false` | Merge repeated instructions at the end (one more measurement) |
 | `auto_apply` | `true` | Apply a verified fix automatically, only when every safety condition holds |
 
@@ -363,6 +391,13 @@ These came from watching real runs. Please read them before you rely on the tool
   model. The thresholds (85% holdout, 3-run confirmation) are defaults chosen by the author, not measured.
 - **Costs are real.** Each run uses your Claude plan (roughly $0.5 to $2 equivalent in our runs). A daily schedule repeats
   that every day.
+- **New in this version, tried only with the fake Claude and one real colleague agent so far:** the held-back (NOT PROVEN)
+  warning, the one-idea edit rule (a rough sentence count, plus a request in the fixer's prompt to match the file's format;
+  the format itself is not checked), mining with message numbers and context, cleaning of mined checks, `needs_tools`
+  flagging, `detect` / `configure`, fake tools for a custom runner and the real-price recheck. The built-in swearing list is a
+  small starter list; add your own words in `.evolver/mask_words.txt`.
+- **Noise is about 15 points** between two identical runs on a small test set (we saw holdout 58% and 75% on the same
+  agent). A single accepted fix on a few tests is a hint, not a proof.
 - **Not compared with other tools yet.**
 - **License: not added yet.**
 

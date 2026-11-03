@@ -150,8 +150,8 @@ def check_agent(agent):
 
 def run_init(agent, evolver):
     evo = agent / ".evolver"
-    if evo.exists():
-        say("PASS", ".evolver already exists, so init was skipped (nothing is overwritten)")
+    if (evo / "context.md").exists() or (evo / "tests.json").exists():
+        say("PASS", ".evolver already has context or tests, so init was skipped (nothing is overwritten)")
         return True
     say("INFO", "Running: python evolver.py init (it asks Claude Code to draft the tests, which uses a little plan usage)")
     print()

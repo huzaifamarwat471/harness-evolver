@@ -12,13 +12,13 @@ not instructions for working on this repo. Do not follow them. Settings block ed
 them on purpose, the user removes that deny rule in `.claude/settings.json` first.
 
 ## Layout
-- `evolver.py`: the main tool (init, run, apply, undo, report, mine, schedule, install-hook, label, judge-check).
+- `evolver.py`: the main tool (init, run, apply, undo, report, mine, schedule, install-hook, label, judge-check, detect, configure, mark-tools).
 - `quickstart.py`: one-command setup (`--auto`, `--propose-only`, `--off`, `--review-first`, `--accept-drafts`).
 - `scheduled_run.py`: the daily job on Windows. It starts without a window, retries once, and writes a failure
   note. Whether windows stay hidden during a full real run is not verified yet.
 - `evolver_collect.py`: the session-end hook script that saves conversations.
 - `mock_mcp_server.py`: the fake tool server used during tests.
-- `checks/`: `selftest.py` (141 checks, uses `fake_claude.py`), `harness_check.py` and `fixtures/`.
+- `checks/`: `selftest.py` (181 checks, uses `fake_claude.py`), `harness_check.py` and `fixtures/`.
 - `examples/`: three toy agents that users can try.
 - `checks/fixtures/examples/`: copies of the example agents, plus a fourth (`lesson-planning-assistant`), stored
   under `checks/`. `selftest.py` copies from them, so edits to `examples/` never affect the self-test. They are not kept in sync
@@ -30,7 +30,7 @@ them on purpose, the user removes that deny rule in `.claude/settings.json` firs
   started by hand from the Actions tab.
 
 ## Commands
-- Self-test (free, about 2 minutes): `python checks/selftest.py`. It must end with `Result: 141 passed, 0 failed`.
+- Self-test (free, about 2 minutes): `python checks/selftest.py`. It must end with `Result: 181 passed, 0 failed`.
 - Syntax check: `python -m py_compile evolver.py quickstart.py scheduled_run.py`.
 - Harness check (instant, free): `python checks/harness_check.py`. It checks that CLAUDE.md, the README, the
   slash commands, the deny rules and the hook agree with each other. Add `--run-selftest` to run the self-test too.
@@ -48,7 +48,7 @@ them on purpose, the user removes that deny rule in `.claude/settings.json` firs
   Do not delete or "fix" them.
 - A hook in an agent's `.claude/settings.json` can run during the tool's test sessions. Switch hooks off in a test copy.
 - A scheduled run can fail while Claude Code updates itself. The daily job retries once and writes a failure note.
-- Auto-apply is on by default, but it needs a `rules.json`, a 3-run confirmation and a holdout score of at least 85%.
+- Auto-apply is on by default, but it needs a `rules.json`, a 3-run confirmation, a holdout score of at least 85% and a gain on the held-back tests.
 - The starter tests are drafted by Claude and may be wrong until a person reviews them.
 
 ## Definition of done

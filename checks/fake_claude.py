@@ -64,10 +64,20 @@ if "Rewrite the file so it is shorter" in prompt:
     text = prompt.split("---\n", 3)[-1].rsplit("\n---", 1)[0] if prompt.count("---") >= 4 else ""
     reply(text[: max(1, len(text) - 5)])
 if "finding REAL problems" in prompt:
-    first_user = next((l.split("USER: ", 1)[1] for l in prompt.splitlines() if "] USER: " in l), "")
+    user_lines = [l for l in prompt.splitlines() if "] USER: " in l]
+    user_idx = [int(l.split("]", 1)[0].lstrip("[")) for l in user_lines]
+    if "[CTX-TEST]" in prompt:     # message numbers, context, and checks that must be cleaned
+        reply(json.dumps({"cases": [
+            {"request": user_idx[-1], "context_from": user_idx[0],
+             "checks": {"max_words": 15, "must_include": ["zzzinvented phrase"], "must_not_include": ["no"],
+                        "rubric": ["Is it short and polite?", "Is the tone polite?"], "label": {"x": 1}},
+             "needs_live_data": False, "evidence": "Wanted it under 15 words."},
+            {"request": user_idx[-1], "checks": {"max_words": 40}, "evidence": "invented limit, short follow-up"}]}))
+    first_user = next((l.split("USER: ", 1)[1] for l in user_lines), "")
     reply(json.dumps({"cases": [
-        {"input": first_user, "checks": {"max_words": 60}, "evidence": "Too long, I read on my phone."},
-        {"input": "A request the user never sent", "checks": {"max_words": 60}, "evidence": "made up"}]}))
+        {"input": first_user, "checks": {"rubric": ["Is the answer short enough to read on a phone?"]},
+         "evidence": "Too long, I read on my phone."},
+        {"input": "A request the user never sent", "checks": {"rubric": ["Is it short?"]}, "evidence": "made up"}]}))
 if "improving the harness" in prompt:
     n = st.get("refiner_calls", 0) + 1
     st["refiner_calls"] = n

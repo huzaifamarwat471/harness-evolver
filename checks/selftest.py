@@ -189,6 +189,27 @@ check("a made-up case was rejected", "made it up" in out)
 check("mined case keeps its source conversation for a fair split", after[-1]["source"] == "sess1")
 out = run_quietly(["mine", str(ag), "--yes"])
 check("already processed conversations are not mined again", "No new conversations" in out)
+
+print("\n9b. Mining hides swearing and slang")
+masked = ev.mask_strong_language("This is stupid bakwas, you fucking idiot")
+check("swearing and slang are masked", not any(w in masked.lower() for w in ("stupid", "bakwas", "fuck", "idiot")), masked)
+check("normal words are not masked", ev.mask_strong_language("A class assistant, please shorten it") == "A class assistant, please shorten it")
+check("your own words are masked too", "[strong language]" in ev.mask_strong_language("so annoying zzzword", ["zzzword"]))
+check("masking reaches inside checks", ev.mask_deep({"must_not_include": ["stupid"], "rubric": ["no bakwas"]})
+      == {"must_not_include": ["[strong language]"], "rubric": ["no [strong language]"]})
+ag2 = fresh_copy("lesson-coach")
+(ag2 / ".evolver" / "inbox").mkdir(exist_ok=True)
+(ag2 / ".evolver" / "mask_words.txt").write_text("# my words\nzzzword\n", encoding="utf-8")
+check("mask_words.txt is read, comments skipped", ev.load_mask_words(ag2 / ".evolver") == ["zzzword"])
+(ag2 / ".evolver" / "inbox" / "sess2.jsonl").write_text("\n".join(_json.dumps(x) for x in [
+    {"type": "user", "message": {"role": "user", "content": "Grade 3 Science, magnets. Give feedback, you stupid bakwas bot."}},
+    {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Here is detailed feedback " * 40}]}},
+    {"type": "user", "message": {"role": "user", "content": "Too long, I read on my phone."}},
+]), encoding="utf-8")
+out = run_quietly(["mine", str(ag2), "--yes"], answers=["y", "y"])
+mined = _json.loads((ag2 / ".evolver" / "tests.json").read_text())[-1]
+check("a mined test input has no swearing or slang", not any(w in mined["input"].lower() for w in ("stupid", "bakwas")), mined["input"])
+check("the mined test keeps the request and marks what was hidden", "magnets" in mined["input"] and "[strong language]" in mined["input"], mined["input"])
 out = run_quietly(["install-hook", str(ag)], answers=["y"])
 settings = _json.loads((ag / ".claude" / "settings.local.json").read_text())
 check("install-hook adds one SessionEnd hook in settings.local.json", "evolver_collect.py" in _json.dumps(settings["hooks"]["SessionEnd"]))

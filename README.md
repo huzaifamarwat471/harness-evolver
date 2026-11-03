@@ -12,7 +12,7 @@ a verified fix is applied on its own (backed up, and `undo` reverses it).
 
 ## Start here
 
-1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 141 passed, 0 failed`.
+1. **Check it works** (free, about 2 minutes): `python checks/selftest.py`. Expect `Result: 148 passed, 0 failed`.
 2. **Set up an agent:** `python quickstart.py "path/to/a COPY of your agent"`. Claude drafts starter tests, which
    uses a little of your Claude plan.
 3. **Run it:** `python evolver.py run "path/to/your agent copy"`. It shows the cost first, proposes one fix at a
@@ -65,7 +65,7 @@ before you rely on it.
 ```
 python checks/selftest.py
 ```
-Expect `Result: 141 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
+Expect `Result: 148 passed, 0 failed`. This uses a fake Claude, so it costs nothing.
 
 ## Try it on the examples (uses Claude usage)
 
@@ -178,7 +178,8 @@ Instead of only using test cases you write, the tool can learn from how people r
    It never calls an AI, never edits your harness, and does nothing inside the tool's own test sessions.
 2. **Mine:** `python evolver.py mine "path/to/your-agent"`
    Looks for moments where a user corrected the agent ("too long", "that's wrong") and drafts test cases from them.
-   Emails, phone and ID numbers, and keys are hidden before sending. Cases whose request is not really in the
+   Emails, phone and ID numbers, and keys are hidden before sending, and so are swearing and slang (shown as
+   `[strong language]`; add your own words, one per line, to `.evolver/mask_words.txt`). Cases whose request is not really in the
    conversation are dropped. **You approve each case** before it is added to `tests.json`.
 3. **Run:** `python evolver.py run "path/to/your-agent" --auto --yes` (for example once a day), then review
    `proposed.patch` and `apply` when you agree.
